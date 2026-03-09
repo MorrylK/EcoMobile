@@ -35,7 +35,7 @@
 
   export default defineConfig({
     plugins: [react(), reactDOMCompatPlugin()],
-    base: '',
+    base: '/',
     resolve: {
       extensions: ['.js', '.jsx', '.ts', '.tsx', '.json'],
       alias: {
