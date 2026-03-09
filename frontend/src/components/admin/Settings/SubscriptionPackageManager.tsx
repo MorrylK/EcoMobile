@@ -640,8 +640,8 @@ export function SubscriptionPackageManager() {
   };
 
   const handleSaveTier = async () => {
-    if (!tierForm.durationMinutes || tierForm.price < 0) {
-      toast.error('Durée et prix sont requis');
+    if (!tierForm.durationMinutes || tierForm.price <= 0) {
+      toast.error('Durée et prix sont requis (prix > 0)');
       return;
     }
     try {

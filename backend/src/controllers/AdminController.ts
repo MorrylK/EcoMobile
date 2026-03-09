@@ -3,6 +3,22 @@ import { prisma } from '../config/prisma';
 import { AuthRequest, logActivity } from '../middleware/auth';
 import { t } from '../locales';
 import PricingTierService from '../services/PricingTierService';
+import fs from 'fs';
+import path from 'path';
+
+const APP_VERSION_FILE = path.resolve(__dirname, '../../data/app-version.json');
+
+function readAppVersion() {
+  try {
+    return JSON.parse(fs.readFileSync(APP_VERSION_FILE, 'utf-8'));
+  } catch {
+    return { nativeVersion: '1.0.0', minNativeVersion: '1.0.0', apkUrl: null, changelog: '' };
+  }
+}
+
+function writeAppVersion(data: object) {
+  fs.writeFileSync(APP_VERSION_FILE, JSON.stringify(data, null, 2), 'utf-8');
+}
 
 export class AdminController {
 
@@ -3812,6 +3828,33 @@ export class AdminController {
     try {
       const conflicts = await PricingTierService.getAllConflicts();
       return res.status(200).json({ success: true, data: { conflicts } });
+    } catch (error: any) {
+      return res.status(500).json({ success: false, message: error.message });
+    }
+  }
+
+  // ─── App Version ─────────────────────────────────────────────────────────
+
+  async getAppVersion(_req: express.Request, res: express.Response) {
+    try {
+      return res.status(200).json({ success: true, data: readAppVersion() });
+    } catch (error: any) {
+      return res.status(500).json({ success: false, message: error.message });
+    }
+  }
+
+  async updateAppVersion(req: AuthRequest, res: express.Response) {
+    try {
+      const current = readAppVersion();
+      const { nativeVersion, minNativeVersion, apkUrl, changelog } = req.body;
+      const updated = {
+        nativeVersion: nativeVersion ?? current.nativeVersion,
+        minNativeVersion: minNativeVersion ?? current.minNativeVersion,
+        apkUrl: apkUrl !== undefined ? apkUrl : current.apkUrl,
+        changelog: changelog !== undefined ? changelog : current.changelog,
+      };
+      writeAppVersion(updated);
+      return res.status(200).json({ success: true, data: updated });
     } catch (error: any) {
       return res.status(500).json({ success: false, message: error.message });
     }

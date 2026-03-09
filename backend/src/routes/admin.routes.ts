@@ -95,6 +95,10 @@ router.put('/settings', requirePermission('settings', 'update'), AdminController
 router.get('/pricing', requirePermission('pricing', 'read'), AdminController.getPricing);
 router.put('/pricing', requirePermission('pricing', 'update'), AdminController.updatePricing);
 
+// App version manifest (native update distribution)
+router.get('/app-version', requirePermission('settings', 'read'), AdminController.getAppVersion);
+router.put('/app-version', requirePermission('settings', 'update'), AdminController.updateAppVersion);
+
 // PricingTier (tarification sans forfait)
 router.get('/pricing/tiers', requirePermission('pricing', 'read'), AdminController.getPricingTiers);
 router.post('/pricing/tiers', requirePermission('pricing', 'create'), AdminController.createPricingTier);

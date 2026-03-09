@@ -11,6 +11,13 @@ const router = express.Router();
 router.get('/pricing', AdminController.getCurrentPricing);
 
 /**
+ * @route   GET /api/v1/public/app-version
+ * @desc    Get app version manifest (native version + APK URL)
+ * @access  Public
+ */
+router.get('/app-version', AdminController.getAppVersion);
+
+/**
  * @route   GET /api/v1/public/company
  * @desc    Get company information (public)
  * @access  Public

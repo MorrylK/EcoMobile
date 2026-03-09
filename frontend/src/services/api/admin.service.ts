@@ -456,6 +456,27 @@ export class AdminService {
     if (!response.success || !response.data) throw new Error(response.error || 'Erreur');
     return response.data;
   }
+
+  // ─── App Version ─────────────────────────────────────────────────────────
+
+  async getAppVersion(): Promise<AppVersionManifest> {
+    const response = await apiClient.get<AppVersionManifest>('/admin/app-version');
+    if (!response.success || !response.data) throw new Error(response.error || 'Erreur');
+    return response.data;
+  }
+
+  async updateAppVersion(data: Partial<AppVersionManifest>): Promise<AppVersionManifest> {
+    const response = await apiClient.put<AppVersionManifest>('/admin/app-version', data);
+    if (!response.success || !response.data) throw new Error(response.error || 'Erreur');
+    return response.data;
+  }
+}
+
+export interface AppVersionManifest {
+  nativeVersion: string;
+  minNativeVersion: string;
+  apkUrl: string | null;
+  changelog: string;
 }
 
 export const adminService = new AdminService();

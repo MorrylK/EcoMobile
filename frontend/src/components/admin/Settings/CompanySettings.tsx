@@ -1,11 +1,12 @@
 import React, { useState, useEffect } from 'react';
-import { Save, Building2, Mail, MapPin, CreditCard, Facebook, Twitter, Instagram, Linkedin, Globe } from 'lucide-react';
+import { Save, Building2, Mail, MapPin, CreditCard, Facebook, Twitter, Instagram, Linkedin, Globe, Smartphone } from 'lucide-react';
 import { Card } from '../../ui/card';
 import { Button } from '../../ui/button';
 import { Input } from '../../ui/input';
 import { Label } from '../../ui/label';
 import { Textarea } from '../../ui/textarea';
 import { companyService, CompanySettings as CompanySettingsType } from '../../../services/api/company.service';
+import { adminService, AppVersionManifest } from '../../../services/api/admin.service';
 import { useTranslation } from '../../../lib/i18n';
 import { toast } from 'sonner';
 import { usePermissions } from '../../../hooks/usePermissions';
@@ -14,6 +15,8 @@ export function CompanySettings() {
   const [settings, setSettings] = useState<CompanySettingsType | null>(null);
   const [isLoading, setIsLoading] = useState(true);
   const [isSaving, setIsSaving] = useState(false);
+  const [appVersion, setAppVersion] = useState<AppVersionManifest>({ nativeVersion: '1.0.0', minNativeVersion: '1.0.0', apkUrl: null, changelog: '' });
+  const [isSavingVersion, setIsSavingVersion] = useState(false);
   const { t } = useTranslation();
   const { can } = usePermissions();
 
@@ -30,7 +33,17 @@ export function CompanySettings() {
       }
     };
 
+    const loadAppVersion = async () => {
+      try {
+        const data = await adminService.getAppVersion();
+        setAppVersion(data);
+      } catch {
+        // silently ignore — defaults are fine
+      }
+    };
+
     loadSettings();
+    loadAppVersion();
   }, []);
 
   const handleSave = async () => {
@@ -43,6 +56,19 @@ export function CompanySettings() {
       toast.error(error.message || 'Erreur lors de l\'enregistrement');
     } finally {
       setIsSaving(false);
+    }
+  };
+
+  const handleSaveAppVersion = async () => {
+    setIsSavingVersion(true);
+    try {
+      const saved = await adminService.updateAppVersion(appVersion);
+      setAppVersion(saved);
+      toast.success('Version applicative enregistrée');
+    } catch (error: any) {
+      toast.error(error.message || 'Erreur lors de l\'enregistrement');
+    } finally {
+      setIsSavingVersion(false);
     }
   };
 
@@ -173,6 +199,63 @@ export function CompanySettings() {
                 value={settings.mobileMoneyNumber}
                 onChange={(e) => setSettings({ ...settings, mobileMoneyNumber: e.target.value })}
                 placeholder="+237 6XX XXX XXX"
+              />
+            </div>
+          </div>
+        </Card>
+
+        {/* App Version */}
+        <Card className="p-6 lg:col-span-2">
+          <div className="flex items-center justify-between mb-4">
+            <h2 className="flex items-center gap-2">
+              <Smartphone className="w-5 h-5 text-green-600" />
+              Version de l'application mobile
+            </h2>
+            {can.updateSettings() && (
+              <Button size="sm" onClick={handleSaveAppVersion} disabled={isSavingVersion}>
+                <Save className="w-4 h-4 mr-2" />
+                {isSavingVersion ? 'Enregistrement...' : 'Enregistrer'}
+              </Button>
+            )}
+          </div>
+          <p className="text-sm text-gray-500 mb-4">
+            Gérez le déploiement des mises à jour natives (APK). Lorsque <code>minNativeVersion</code> est supérieure à la version installée chez l'utilisateur, l'application télécharge automatiquement le nouvel APK.
+          </p>
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+            <div>
+              <Label>Version native actuelle</Label>
+              <Input
+                value={appVersion.nativeVersion}
+                onChange={(e) => setAppVersion({ ...appVersion, nativeVersion: e.target.value })}
+                placeholder="1.0.0"
+              />
+              <p className="text-xs text-gray-400 mt-1">Version du dernier APK publié (ex : 1.1.0)</p>
+            </div>
+            <div>
+              <Label>Version native minimale requise</Label>
+              <Input
+                value={appVersion.minNativeVersion}
+                onChange={(e) => setAppVersion({ ...appVersion, minNativeVersion: e.target.value })}
+                placeholder="1.0.0"
+              />
+              <p className="text-xs text-gray-400 mt-1">Les utilisateurs sous cette version seront forcés à mettre à jour</p>
+            </div>
+            <div className="md:col-span-2">
+              <Label>URL de téléchargement de l'APK</Label>
+              <Input
+                value={appVersion.apkUrl ?? ''}
+                onChange={(e) => setAppVersion({ ...appVersion, apkUrl: e.target.value || null })}
+                placeholder="https://example.com/ecomobile.apk"
+              />
+              <p className="text-xs text-gray-400 mt-1">Laisser vide pour désactiver la mise à jour native</p>
+            </div>
+            <div className="md:col-span-2">
+              <Label>Changelog (notes de version)</Label>
+              <Textarea
+                value={appVersion.changelog}
+                onChange={(e) => setAppVersion({ ...appVersion, changelog: e.target.value })}
+                rows={3}
+                placeholder="- Nouvelle fonctionnalité...\n- Correction de bug..."
               />
             </div>
           </div>
