@@ -116,6 +116,26 @@ export interface PricingConfig {
   }>;
 }
 
+export interface PricingTier {
+  id: string;
+  name?: string | null;
+  durationMinutes: number;
+  price: number;
+  dayStartHour?: number | null;
+  dayEndHour?: number | null;
+  isActive: boolean;
+  createdAt?: string;
+  updatedAt?: string;
+}
+
+export interface PricingTierConflict {
+  tierId: string;
+  tierName: string;
+  overlapStart: number;
+  overlapEnd: number;
+  priorityWinner: string;
+}
+
 export class AdminService {
   /**
    * OPTIMISATION: Récupère toutes les données du dashboard en une seule requête groupée
@@ -391,6 +411,49 @@ export class AdminService {
     if (!response.success || !response.data) {
       throw new Error(response.error || 'Erreur lors de la réinitialisation du mot de passe');
     }
+    return response.data;
+  }
+
+  // ─── PricingTier ─────────────────────────────────────────────────────────
+
+  async getPricingTiers(): Promise<PricingTier[]> {
+    const response = await apiClient.get<{ tiers: PricingTier[] }>('/admin/pricing/tiers');
+    if (!response.success || !response.data) throw new Error(response.error || 'Erreur');
+    return response.data.tiers;
+  }
+
+  async createPricingTier(data: Omit<PricingTier, 'id' | 'createdAt' | 'updatedAt'>): Promise<{ tier: PricingTier; conflicts: PricingTierConflict[] }> {
+    const response = await apiClient.post<{ tier: PricingTier; conflicts: PricingTierConflict[] }>('/admin/pricing/tiers', data);
+    if (!response.success || !response.data) throw new Error(response.error || 'Erreur');
+    return response.data;
+  }
+
+  async updatePricingTier(id: string, data: Partial<PricingTier>): Promise<{ tier: PricingTier; conflicts: PricingTierConflict[] }> {
+    const response = await apiClient.put<{ tier: PricingTier; conflicts: PricingTierConflict[] }>(`/admin/pricing/tiers/${id}`, data);
+    if (!response.success || !response.data) throw new Error(response.error || 'Erreur');
+    return response.data;
+  }
+
+  async deletePricingTier(id: string): Promise<void> {
+    const response = await apiClient.delete(`/admin/pricing/tiers/${id}`);
+    if (!response.success) throw new Error(response.error || 'Erreur');
+  }
+
+  async togglePricingTierActive(id: string): Promise<PricingTier> {
+    const response = await apiClient.put<{ tier: PricingTier }>(`/admin/pricing/tiers/${id}/toggle`);
+    if (!response.success || !response.data) throw new Error(response.error || 'Erreur');
+    return response.data.tier;
+  }
+
+  async getPricingTierConflicts(): Promise<{ tier: PricingTier; conflicts: PricingTierConflict[] }[]> {
+    const response = await apiClient.get<{ conflicts: { tier: PricingTier; conflicts: PricingTierConflict[] }[] }>('/admin/pricing/tiers/conflicts');
+    if (!response.success || !response.data) throw new Error(response.error || 'Erreur');
+    return response.data.conflicts;
+  }
+
+  async updateFallbackRate(baseHourlyRate: number): Promise<{ baseHourlyRate: number }> {
+    const response = await apiClient.put<{ baseHourlyRate: number }>('/admin/pricing/fallback', { baseHourlyRate });
+    if (!response.success || !response.data) throw new Error(response.error || 'Erreur');
     return response.data;
   }
 }

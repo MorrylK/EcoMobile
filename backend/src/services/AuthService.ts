@@ -177,6 +177,7 @@ export class AuthService {
     email: string;
     phone?: string;
     address?: string;
+    avatar?: string;
   }, language: 'fr' | 'en' = 'fr'): Promise<any> {
     const user = await this.userRepository.findById(userId);
     if (!user) {
@@ -197,6 +198,7 @@ export class AuthService {
       lastName: data.lastName,
       phone: data.phone,
       address: data.address,
+      avatar: data.avatar,
     });
 
     const { password, ...userWithoutPassword } = updatedUser;

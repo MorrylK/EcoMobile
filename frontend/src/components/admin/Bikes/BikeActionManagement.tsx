@@ -700,8 +700,43 @@ export function BikeActionManagement() {
                   )}
                 </div>
 
+                {/* Évaluation par élément (scores sliders) */}
+                {(() => {
+                  const scores = inspectionModal.request.metadata?.inspection?.itemScores as
+                    | { id: string; label: string; value: number; state: 'good' | 'degraded' | 'bad' }[]
+                    | undefined;
+                  if (!scores || scores.length === 0) return null;
+                  return (
+                    <div className="mb-4">
+                      <p className="text-sm font-medium text-gray-500 mb-2">Évaluation par élément</p>
+                      <div className="grid grid-cols-1 gap-2">
+                        {scores.map((item) => {
+                          const pct = item.value ?? 0;
+                          const color = pct <= 30 ? '#ef4444' : pct <= 69 ? '#f59e0b' : '#16a34a';
+                          const stateLabel = pct <= 30 ? 'Mauvais' : pct <= 69 ? 'Dégradé' : 'Bon';
+                          return (
+                            <div key={item.id} className="flex items-center gap-3">
+                              <span className="text-xs text-gray-600 w-32 shrink-0">{item.label}</span>
+                              <div className="flex-1 bg-gray-200 rounded-full h-2">
+                                <div
+                                  className="h-2 rounded-full transition-all"
+                                  style={{ width: `${pct}%`, backgroundColor: color }}
+                                />
+                              </div>
+                              <span className="text-xs font-semibold w-8 text-right" style={{ color }}>
+                                {pct}%
+                              </span>
+                              <span className="text-xs w-14" style={{ color }}>{stateLabel}</span>
+                            </div>
+                          );
+                        })}
+                      </div>
+                    </div>
+                  );
+                })()}
+
                 {/* Problèmes identifiés */}
-                {inspectionModal.request.metadata?.inspectionData?.issues && 
+                {inspectionModal.request.metadata?.inspectionData?.issues &&
                  inspectionModal.request.metadata.inspectionData.issues.length > 0 && (
                   <div className="mb-4">
                     <p className="text-sm font-medium text-gray-500 mb-2">Problèmes signalés</p>
@@ -716,11 +751,13 @@ export function BikeActionManagement() {
                 )}
 
                 {/* Notes */}
-                {inspectionModal.request.metadata?.inspectionData?.notes && (
+                {(inspectionModal.request.metadata?.inspectionData?.notes || inspectionModal.request.metadata?.inspection?.notes) && (
                   <div className="mb-4">
                     <p className="text-sm font-medium text-gray-500 mb-2">Notes de l'utilisateur</p>
                     <div className="bg-gray-50 border border-gray-200 rounded-lg p-3">
-                      <p className="text-sm text-gray-700">{inspectionModal.request.metadata.inspectionData.notes}</p>
+                      <p className="text-sm text-gray-700">
+                        {inspectionModal.request.metadata?.inspection?.notes || inspectionModal.request.metadata?.inspectionData?.notes}
+                      </p>
                     </div>
                   </div>
                 )}

@@ -8,17 +8,30 @@
     "email_already_exists": "This email already exists",
     "invalid_token": "Invalid or expired token",
     "unauthorized": "Unauthorized",
+    "forbidden": "Access forbidden",
+    "insufficient_permissions": "Insufficient permissions",
     "token_required": "Token required",
     "password_reset_success": "Password reset successfully",
     "password_changed": "Password changed successfully",
     "email_verified": "Email verified successfully",
     "register": {
-      "email_exists": "This email already exists"
+      "email_exists": "This email already exists",
+      "success": "Registration successful"
     },
     "login": {
+      "success": "Login successful",
       "failed": "Invalid email or password"
     },
+    "logout": {
+      "success": "Logout successful"
+    },
     "password": {
+      "reset": {
+        "success": "Password reset successfully"
+      },
+      "change": {
+        "success": "Password changed successfully"
+      },
       "current": {
         "invalid": "Current password incorrect"
       }
@@ -26,29 +39,61 @@
     "forgot_password": {
       "success": "If an account with this email exists, a reset link has been sent."
     },
+    "verify_email": {
+      "success": "Email verified successfully"
+    },
+    "resend_verification": {
+      "success": "Verification email resent successfully"
+    },
     "phone": {
-      "verification_sent": "Verification code sent",
+      "verification_sent": "Verification code sent by email",
       "verified": "Phone verified successfully",
       "invalid_code": "Invalid or expired code",
       "code_expired": "Verification code has expired",
       "no_code_sent": "No verification code has been sent"
     },
+    "token": {
+      "invalid": "Invalid or expired token",
+      "missing": "Authentication token missing"
+    },
     "account": {
       "deactivated": "Your account has been deactivated. Please contact support."
+    },
+    "user": {
+      "not_found": "User not found"
+    },
+    "email": {
+      "verified": "Email verified successfully"
     },
     "account_verified": "Account verified successfully"
   },
   "user": {
     "not_found": "User not found",
+    "created": "User created successfully",
+    "updated": "User updated successfully",
+    "deleted": "User deleted successfully",
     "profile_updated": "Profile updated successfully",
+    "profile_retrieved": "Profile retrieved successfully",
+    "dashboard_retrieved": "Dashboard retrieved",
     "account_deactivated": "Account deactivated",
     "invalid_credentials": "Invalid credentials",
-    "profile_retrieved": "Profile retrieved successfully",
-    "account_verified": "Account verified successfully"
+    "account_verified": "Account verified successfully",
+    "profile": {
+      "updated": "Profile updated successfully"
+    }
+  },
+  "account": {
+    "deleted": "Account deleted successfully"
+  },
+  "profile": {
+    "update": {
+      "success": "Profile updated successfully"
+    }
   },
   "bike": {
     "not_found": "Bike not found",
     "not_available": "Bike not available",
+    "unavailable": "Bike not available",
     "already_in_use": "Bike already in use",
     "unlocked": "Bike unlocked successfully",
     "locked": "Bike locked successfully",
@@ -56,12 +101,14 @@
     "updated": "Bike updated successfully",
     "deleted": "Bike deleted successfully",
     "list_retrieved": "Bike list retrieved",
+    "available_retrieved": "Available bikes retrieved",
     "nearby_retrieved": "Nearby bikes retrieved"
   },
   "ride": {
     "started": "Ride started successfully",
     "ended": "Ride ended successfully",
     "not_found": "Ride not found",
+    "not_in_progress": "No ride in progress",
     "already_in_progress": "You already have a ride in progress",
     "no_active_ride": "No active ride",
     "history_retrieved": "Ride history retrieved",
@@ -75,7 +122,8 @@
     "withdrawal_failed": "Withdrawal failed",
     "balance_retrieved": "Balance retrieved successfully",
     "transaction_history": "Transaction history retrieved",
-    "transaction_not_found": "Transaction not found"
+    "transaction_not_found": "Transaction not found",
+    "not_found": "Wallet not found"
   },
   "payment": {
     "initiated": "Payment initiated successfully",
@@ -84,7 +132,8 @@
     "invalid_amount": "Invalid amount",
     "coolpay_error": "My-CoolPay error",
     "fees_calculated": "Fees calculated: {{fees}} XAF on {{amount}} XAF",
-    "total_amount": "Total amount to pay: {{total}} XAF"
+    "total_amount": "Total amount to pay: {{total}} XAF",
+    "methods_retrieved": "Payment methods retrieved"
   },
   "chat": {
     "message_sent": "Message sent",
@@ -97,17 +146,18 @@
     "list_retrieved": "Notification list retrieved",
     "all_marked_read": "All notifications marked as read",
     "deleted": "Notification deleted",
+    "email_verified": "Email verified successfully",
     "ride_started": "Ride started",
     "ride_ended": "Ride completed - Cost: {{cost}} XAF",
     "wallet_deposit": "Deposit of {{amount}} XAF completed",
     "wallet_withdrawal": "Withdrawal of {{amount}} XAF completed",
     "ride_payment": "Ride payment: {{amount}} XAF",
-    "account_created": "Welcome to FreeBike!",
+    "account_created": "Welcome to EcoMobile!",
     "password_reset_requested": "Password reset requested",
     "bike_booked": "Bike booked successfully",
     "incident_reported": "Incident reported - Being processed",
     "incident_resolved": "Your incident has been resolved",
-    "promotion": "Special FreeBike Offer",
+    "promotion": "Special EcoMobile Offer",
     "maintenance_scheduled": "Maintenance scheduled for bike {{bikeCode}}"
   },
   "admin": {
@@ -115,6 +165,7 @@
     "users_retrieved": "User list retrieved",
     "bikes_retrieved": "Bike list retrieved",
     "stats_retrieved": "Statistics retrieved",
+    "dashboard_retrieved": "Dashboard retrieved",
     "settings_updated": "Settings updated",
     "pricing_updated": "Pricing updated"
   },
@@ -124,31 +175,98 @@
     "field_required": "Field {{field}} is required",
     "invalid_format": "Invalid format",
     "invalid_phone": "Invalid phone number",
+    "invalid_date": "Invalid date",
+    "invalid_pagination": "Invalid pagination parameters",
+    "message": {
+      "required": "Message is required"
+    },
     "password": {
       "min_length": "Password must be at least 8 characters long",
       "complexity": "Password must contain at least one uppercase letter, one lowercase letter, and one number"
     }
   },
+  "common": {
+    "server_error": "Internal server error"
+  },
   "error": {
     "internal_server": "Internal server error",
+    "server": "Internal server error",
     "not_found": "Resource not found",
     "bad_request": "Invalid request",
     "database_error": "Database error",
+    "database": "Database error",
+    "validation": "Validation error",
     "service_unavailable": "Service temporarily unavailable",
+    "user_not_found": "User not found",
     "email_not_verified": "Email not verified",
     "email_already_verified": "Email already verified",
     "invalid_verification_token": "Invalid verification token",
     "verification_token_expired": "Verification token expired",
     "email_verification_failed": "Failed to send verification email",
     "password_reset_failed": "Failed to send reset email",
-<<<<<<< HEAD
     "welcome_notification_failed": "Failed to send welcome notification",
     "phone_not_found": "Phone number not found",
     "phone_required": "Phone number required",
-    "code_required": "Verification code required"
-=======
-    "welcome_notification_failed": "Failed to send welcome notification"
->>>>>>> origin/main
+    "code_required": "Verification code required",
+    "bike": {
+      "not_found": "Bike not found",
+      "code_exists": "This bike code already exists",
+      "gps_device_exists": "This GPS device is already assigned to another bike"
+    },
+    "document": {
+      "file_uri_not_supported": "File URI format not supported",
+      "invalid_image_format": "Invalid image format (JPG, PNG, WebP accepted)"
+    },
+    "document_not_found": "Document not found",
+    "document_already_approved": "This document has already been approved",
+    "not_all_documents_approved": "All documents must be approved before account validation",
+    "residence_proof_not_found": "Residence proof not found",
+    "residence_proof_already_approved": "This residence proof has already been approved",
+    "activity_location_proof_not_found": "Activity location proof not found",
+    "activity_location_proof_already_approved": "This activity location proof has already been approved",
+    "ride": {
+      "start_failed": "Failed to start ride",
+      "end_failed": "Failed to end ride",
+      "cancel_failed": "Failed to cancel ride"
+    }
+  },
+  "incidents": {
+    "created_success": "Incident reported successfully",
+    "updated_success": "Incident updated successfully",
+    "deleted_success": "Incident deleted successfully",
+    "retrieved_success": "Incidents retrieved successfully",
+    "details_retrieved": "Incident details retrieved",
+    "not_found": "Incident not found",
+    "cannot_delete_not_open": "Cannot delete an incident that is not open",
+    "cannot_update_not_open": "Cannot update an incident that is not open"
+  },
+  "incident": {
+    "not_found": "Incident not found"
+  },
+  "preferences": {
+    "retrieved": "Preferences retrieved",
+    "updated": "Preferences updated"
+  },
+  "push_token": {
+    "registered": "Push token registered",
+    "unregistered": "Push token removed"
+  },
+  "reservation": {
+    "create": "Reservation created successfully"
+  },
+  "session": {
+    "fetch": {
+      "error": "Error fetching sessions"
+    },
+    "not_found": "Session not found",
+    "disconnect": {
+      "success": "Session disconnected successfully",
+      "error": "Error disconnecting session"
+    },
+    "disconnect_all": {
+      "success": "All sessions disconnected successfully",
+      "error": "Error disconnecting all sessions"
+    }
   },
   "success": {
     "operation_completed": "Operation completed successfully",
@@ -158,20 +276,20 @@
     "deleted": "Deleted successfully"
   },
   "email": {
-    "welcome_subject": "Welcome to FreeBike - Your account has been created",
-    "welcome_title": "Welcome to FreeBike!",
-    "welcome_message": "Hello {{firstName}},\n\nWe're excited to welcome you to FreeBike! Your account has been successfully created.\n\nYou can now enjoy our electric bikes throughout the city.",
+    "welcome_subject": "Welcome to EcoMobile — Your account has been created",
+    "welcome_title": "Welcome to EcoMobile!",
+    "welcome_message": "Hello {{firstName}},\n\nWe're excited to welcome you to EcoMobile! Your account has been successfully created.\n\nYou can now enjoy our electric bikes throughout the city.",
     "welcome_cta": "Start Riding",
-    "password_reset_subject": "Reset your FreeBike password",
+    "password_reset_subject": "Reset your EcoMobile password",
     "password_reset_title": "Password Reset",
     "password_reset_message": "Hello {{firstName}},\n\nYou requested to reset your password.\n\nClick the button below to create a new password. This link will expire in 1 hour.",
     "password_reset_cta": "Reset my password",
     "password_reset_ignore": "If you didn't request this reset, please ignore this email.",
-    "ride_completed_subject": "Ride completed - FreeBike",
+    "ride_completed_subject": "Ride completed — EcoMobile",
     "ride_completed_title": "Ride completed successfully!",
     "ride_completed_message": "Hello {{firstName}},\n\nYour ride is completed.\n\nDuration: {{duration}} minutes\nDistance: {{distance}} km\nCost: {{cost}} XAF",
     "ride_completed_cta": "View details",
-    "deposit_subject": "Deposit completed - FreeBike",
+    "deposit_subject": "Deposit completed — EcoMobile",
     "deposit_title": "Deposit confirmed",
     "deposit_message": "Hello {{firstName}},\n\nYour deposit of {{amount}} XAF has been completed successfully.\n\nNew balance: {{balance}} XAF",
     "deposit_cta": "View my wallet",
@@ -179,29 +297,13 @@
     "promotion_title": "{{title}}",
     "promotion_message": "{{message}}",
     "promotion_cta": "Learn more",
-<<<<<<< HEAD
-    "footer_text": "© 2026 FreeBike. All rights reserved.",
-=======
->>>>>>> origin/main
-    "incident_resolved_subject": "Your incident has been resolved - FreeBike",
+    "incident_resolved_subject": "Your incident has been resolved — EcoMobile",
     "incident_resolved_title": "Incident resolved",
     "incident_resolved_message": "Hello {{firstName}},\n\nWe inform you that your incident #{{incidentId}} has been resolved.\n\nThank you for your patience.",
     "incident_resolved_cta": "View details",
-    "footer_text": "Thank you for using FreeBike",
+    "footer_text": "© 2026 EcoMobile. All rights reserved.",
     "footer_contact": "Need help? Contact us",
     "unsubscribe": "Unsubscribe"
-  },
-  "session": {
-    "fetch": {
-      "error": "Error fetching sessions"
-    },
-    "not_found": "Session not found",
-    "disconnect": {
-      "error": "Error disconnecting session"
-    },
-    "disconnect_all": {
-      "error": "Error disconnecting all sessions"
-    }
   },
   "device": {
     "unknown": "Unknown device",
@@ -220,7 +322,6 @@
   "location": {
     "local": "Local location",
     "cameroon": "Cameroon"
-<<<<<<< HEAD
   },
   "document": {
     "submitted": "Document submitted successfully",
@@ -235,7 +336,5 @@
     "residence": {
       "already_submitted": "A residence proof is already pending or approved"
     }
-=======
->>>>>>> origin/main
   }
 }

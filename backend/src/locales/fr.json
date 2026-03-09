@@ -8,17 +8,30 @@
     "email_already_exists": "Cet email existe déjà",
     "invalid_token": "Token invalide ou expiré",
     "unauthorized": "Non autorisé",
+    "forbidden": "Accès interdit",
+    "insufficient_permissions": "Permissions insuffisantes",
     "token_required": "Token requis",
     "password_reset_success": "Mot de passe réinitialisé avec succès",
     "password_changed": "Mot de passe modifié avec succès",
     "email_verified": "Email vérifié avec succès",
     "register": {
-      "email_exists": "Cet email existe déjà"
+      "email_exists": "Cet email existe déjà",
+      "success": "Inscription réussie"
     },
     "login": {
+      "success": "Connexion réussie",
       "failed": "Email ou mot de passe incorrect"
     },
+    "logout": {
+      "success": "Déconnexion réussie"
+    },
     "password": {
+      "reset": {
+        "success": "Mot de passe réinitialisé avec succès"
+      },
+      "change": {
+        "success": "Mot de passe modifié avec succès"
+      },
       "current": {
         "invalid": "Mot de passe actuel incorrect"
       }
@@ -26,29 +39,61 @@
     "forgot_password": {
       "success": "Si un compte avec cet email existe, un lien de réinitialisation a été envoyé."
     },
+    "verify_email": {
+      "success": "Email vérifié avec succès"
+    },
+    "resend_verification": {
+      "success": "Email de vérification renvoyé avec succès"
+    },
     "phone": {
-      "verification_sent": "Code de vérification envoyé",
+      "verification_sent": "Code de vérification envoyé par email",
       "verified": "Téléphone vérifié avec succès",
       "invalid_code": "Code invalide ou expiré",
       "code_expired": "Le code de vérification a expiré",
       "no_code_sent": "Aucun code de vérification n'a été envoyé"
     },
+    "token": {
+      "invalid": "Token invalide ou expiré",
+      "missing": "Token d'authentification manquant"
+    },
     "account": {
       "deactivated": "Votre compte a été désactivé. Veuillez contacter le support."
+    },
+    "user": {
+      "not_found": "Utilisateur non trouvé"
+    },
+    "email": {
+      "verified": "Email vérifié avec succès"
     },
     "account_verified": "Compte vérifié avec succès"
   },
   "user": {
     "not_found": "Utilisateur non trouvé",
+    "created": "Utilisateur créé avec succès",
+    "updated": "Utilisateur mis à jour avec succès",
+    "deleted": "Utilisateur supprimé avec succès",
     "profile_updated": "Profil mis à jour avec succès",
+    "profile_retrieved": "Profil récupéré avec succès",
+    "dashboard_retrieved": "Tableau de bord récupéré",
     "account_deactivated": "Compte désactivé",
     "invalid_credentials": "Identifiants invalides",
-    "profile_retrieved": "Profil récupéré avec succès",
-    "account_verified": "Compte vérifié avec succès"
+    "account_verified": "Compte vérifié avec succès",
+    "profile": {
+      "updated": "Profil mis à jour avec succès"
+    }
+  },
+  "account": {
+    "deleted": "Compte supprimé avec succès"
+  },
+  "profile": {
+    "update": {
+      "success": "Profil mis à jour avec succès"
+    }
   },
   "bike": {
     "not_found": "Vélo non trouvé",
     "not_available": "Vélo non disponible",
+    "unavailable": "Vélo non disponible",
     "already_in_use": "Vélo déjà en cours d'utilisation",
     "unlocked": "Vélo déverrouillé avec succès",
     "locked": "Vélo verrouillé avec succès",
@@ -56,12 +101,14 @@
     "updated": "Vélo mis à jour avec succès",
     "deleted": "Vélo supprimé avec succès",
     "list_retrieved": "Liste des vélos récupérée",
+    "available_retrieved": "Vélos disponibles récupérés",
     "nearby_retrieved": "Vélos à proximité récupérés"
   },
   "ride": {
     "started": "Trajet démarré avec succès",
     "ended": "Trajet terminé avec succès",
     "not_found": "Trajet non trouvé",
+    "not_in_progress": "Aucun trajet en cours",
     "already_in_progress": "Vous avez déjà un trajet en cours",
     "no_active_ride": "Aucun trajet actif",
     "history_retrieved": "Historique des trajets récupéré",
@@ -75,7 +122,8 @@
     "withdrawal_failed": "Échec du retrait",
     "balance_retrieved": "Solde récupéré avec succès",
     "transaction_history": "Historique des transactions récupéré",
-    "transaction_not_found": "Transaction non trouvée"
+    "transaction_not_found": "Transaction non trouvée",
+    "not_found": "Portefeuille non trouvé"
   },
   "payment": {
     "initiated": "Paiement initié avec succès",
@@ -84,7 +132,8 @@
     "invalid_amount": "Montant invalide",
     "coolpay_error": "Erreur My-CoolPay",
     "fees_calculated": "Frais calculés: {{fees}} XAF sur {{amount}} XAF",
-    "total_amount": "Montant total à payer: {{total}} XAF"
+    "total_amount": "Montant total à payer: {{total}} XAF",
+    "methods_retrieved": "Méthodes de paiement récupérées"
   },
   "chat": {
     "message_sent": "Message envoyé",
@@ -97,17 +146,18 @@
     "list_retrieved": "Liste des notifications récupérée",
     "all_marked_read": "Toutes les notifications marquées comme lues",
     "deleted": "Notification supprimée",
+    "email_verified": "Email vérifié avec succès",
     "ride_started": "Trajet démarré",
     "ride_ended": "Trajet terminé - Coût: {{cost}} XAF",
     "wallet_deposit": "Dépôt de {{amount}} XAF effectué",
     "wallet_withdrawal": "Retrait de {{amount}} XAF effectué",
     "ride_payment": "Paiement de trajet: {{amount}} XAF",
-    "account_created": "Bienvenue sur FreeBike!",
+    "account_created": "Bienvenue sur EcoMobile !",
     "password_reset_requested": "Demande de réinitialisation de mot de passe",
     "bike_booked": "Vélo réservé avec succès",
     "incident_reported": "Incident signalé - En cours de traitement",
     "incident_resolved": "Votre incident a été résolu",
-    "promotion": "Offre spéciale FreeBike",
+    "promotion": "Offre spéciale EcoMobile",
     "maintenance_scheduled": "Maintenance programmée pour le vélo {{bikeCode}}"
   },
   "admin": {
@@ -115,6 +165,7 @@
     "users_retrieved": "Liste des utilisateurs récupérée",
     "bikes_retrieved": "Liste des vélos récupérée",
     "stats_retrieved": "Statistiques récupérées",
+    "dashboard_retrieved": "Tableau de bord récupéré",
     "settings_updated": "Paramètres mis à jour",
     "pricing_updated": "Tarification mise à jour"
   },
@@ -124,31 +175,98 @@
     "field_required": "Le champ {{field}} est requis",
     "invalid_format": "Format invalide",
     "invalid_phone": "Numéro de téléphone invalide",
+    "invalid_date": "Date invalide",
+    "invalid_pagination": "Paramètres de pagination invalides",
+    "message": {
+      "required": "Le message est requis"
+    },
     "password": {
       "min_length": "Le mot de passe doit contenir au moins 8 caractères",
       "complexity": "Le mot de passe doit contenir au moins une majuscule, une minuscule et un chiffre"
     }
   },
+  "common": {
+    "server_error": "Erreur interne du serveur"
+  },
   "error": {
     "internal_server": "Erreur interne du serveur",
+    "server": "Erreur interne du serveur",
     "not_found": "Ressource non trouvée",
     "bad_request": "Requête invalide",
     "database_error": "Erreur de base de données",
+    "database": "Erreur de base de données",
+    "validation": "Erreur de validation",
     "service_unavailable": "Service temporairement indisponible",
+    "user_not_found": "Utilisateur non trouvé",
     "email_not_verified": "Email non vérifié",
     "email_already_verified": "Email déjà vérifié",
     "invalid_verification_token": "Token de vérification invalide",
     "verification_token_expired": "Token de vérification expiré",
     "email_verification_failed": "Échec de l'envoi de l'email de vérification",
     "password_reset_failed": "Échec de l'envoi de l'email de réinitialisation",
-<<<<<<< HEAD
     "welcome_notification_failed": "Échec de l'envoi de la notification de bienvenue",
     "phone_not_found": "Numéro de téléphone non trouvé",
     "phone_required": "Numéro de téléphone requis",
-    "code_required": "Code de vérification requis"
-=======
-    "welcome_notification_failed": "Échec de l'envoi de la notification de bienvenue"
->>>>>>> origin/main
+    "code_required": "Code de vérification requis",
+    "bike": {
+      "not_found": "Vélo non trouvé",
+      "code_exists": "Ce code de vélo existe déjà",
+      "gps_device_exists": "Ce GPS est déjà associé à un autre vélo"
+    },
+    "document": {
+      "file_uri_not_supported": "Format d'URI de fichier non supporté",
+      "invalid_image_format": "Format d'image invalide (JPG, PNG, WebP acceptés)"
+    },
+    "document_not_found": "Document non trouvé",
+    "document_already_approved": "Ce document a déjà été approuvé",
+    "not_all_documents_approved": "Tous les documents doivent être approuvés avant la validation du compte",
+    "residence_proof_not_found": "Justificatif de résidence non trouvé",
+    "residence_proof_already_approved": "Ce justificatif de résidence a déjà été approuvé",
+    "activity_location_proof_not_found": "Justificatif d'activité non trouvé",
+    "activity_location_proof_already_approved": "Ce justificatif d'activité a déjà été approuvé",
+    "ride": {
+      "start_failed": "Échec du démarrage du trajet",
+      "end_failed": "Échec de la fin du trajet",
+      "cancel_failed": "Échec de l'annulation du trajet"
+    }
+  },
+  "incidents": {
+    "created_success": "Incident signalé avec succès",
+    "updated_success": "Incident mis à jour avec succès",
+    "deleted_success": "Incident supprimé avec succès",
+    "retrieved_success": "Incidents récupérés avec succès",
+    "details_retrieved": "Détails de l'incident récupérés",
+    "not_found": "Incident non trouvé",
+    "cannot_delete_not_open": "Impossible de supprimer un incident qui n'est pas ouvert",
+    "cannot_update_not_open": "Impossible de modifier un incident qui n'est pas ouvert"
+  },
+  "incident": {
+    "not_found": "Incident non trouvé"
+  },
+  "preferences": {
+    "retrieved": "Préférences récupérées",
+    "updated": "Préférences mises à jour"
+  },
+  "push_token": {
+    "registered": "Token de notification enregistré",
+    "unregistered": "Token de notification supprimé"
+  },
+  "reservation": {
+    "create": "Réservation créée avec succès"
+  },
+  "session": {
+    "fetch": {
+      "error": "Erreur lors de la récupération des sessions"
+    },
+    "not_found": "Session non trouvée",
+    "disconnect": {
+      "success": "Session déconnectée avec succès",
+      "error": "Erreur lors de la déconnexion de la session"
+    },
+    "disconnect_all": {
+      "success": "Toutes les sessions déconnectées avec succès",
+      "error": "Erreur lors de la déconnexion de toutes les sessions"
+    }
   },
   "success": {
     "operation_completed": "Opération terminée avec succès",
@@ -158,20 +276,20 @@
     "deleted": "Supprimé avec succès"
   },
   "email": {
-    "welcome_subject": "Bienvenue sur FreeBike - Votre compte a été créé",
-    "welcome_title": "Bienvenue sur FreeBike!",
-    "welcome_message": "Bonjour {{firstName}},\n\nNous sommes ravis de vous accueillir sur FreeBike! Votre compte a été créé avec succès.\n\nVous pouvez maintenant profiter de nos vélos électriques partout dans la ville.",
+    "welcome_subject": "Bienvenue sur EcoMobile — Votre compte a été créé",
+    "welcome_title": "Bienvenue sur EcoMobile !",
+    "welcome_message": "Bonjour {{firstName}},\n\nNous sommes ravis de vous accueillir sur EcoMobile ! Votre compte a été créé avec succès.\n\nVous pouvez maintenant profiter de nos vélos électriques partout dans la ville.",
     "welcome_cta": "Commencer à rouler",
-    "password_reset_subject": "Réinitialisation de votre mot de passe FreeBike",
+    "password_reset_subject": "Réinitialisation de votre mot de passe EcoMobile",
     "password_reset_title": "Réinitialisation de mot de passe",
     "password_reset_message": "Bonjour {{firstName}},\n\nVous avez demandé la réinitialisation de votre mot de passe.\n\nCliquez sur le bouton ci-dessous pour créer un nouveau mot de passe. Ce lien expirera dans 1 heure.",
     "password_reset_cta": "Réinitialiser mon mot de passe",
     "password_reset_ignore": "Si vous n'avez pas demandé cette réinitialisation, ignorez cet email.",
-    "ride_completed_subject": "Trajet terminé - FreeBike",
-    "ride_completed_title": "Trajet terminé avec succès!",
+    "ride_completed_subject": "Trajet terminé — EcoMobile",
+    "ride_completed_title": "Trajet terminé avec succès !",
     "ride_completed_message": "Bonjour {{firstName}},\n\nVotre trajet est terminé.\n\nDurée: {{duration}} minutes\nDistance: {{distance}} km\nCoût: {{cost}} XAF",
     "ride_completed_cta": "Voir les détails",
-    "deposit_subject": "Dépôt effectué - FreeBike",
+    "deposit_subject": "Dépôt effectué — EcoMobile",
     "deposit_title": "Dépôt confirmé",
     "deposit_message": "Bonjour {{firstName}},\n\nVotre dépôt de {{amount}} XAF a été effectué avec succès.\n\nNouveau solde: {{balance}} XAF",
     "deposit_cta": "Voir mon portefeuille",
@@ -179,32 +297,13 @@
     "promotion_title": "{{title}}",
     "promotion_message": "{{message}}",
     "promotion_cta": "En savoir plus",
-<<<<<<< HEAD
-    "footer_text": "© 2026 FreeBike. Tous droits réservés.",
-=======
->>>>>>> origin/main
-    "incident_resolved_subject": "Votre incident a été résolu - FreeBike",
+    "incident_resolved_subject": "Votre incident a été résolu — EcoMobile",
     "incident_resolved_title": "Incident résolu",
     "incident_resolved_message": "Bonjour {{firstName}},\n\nNous vous informons que votre incident #{{incidentId}} a été résolu.\n\nMerci de votre patience.",
     "incident_resolved_cta": "Voir les détails",
-<<<<<<< HEAD
-=======
-    "footer_text": "Merci d'utiliser FreeBike",
->>>>>>> origin/main
-    "footer_contact": "Besoin d'aide? Contactez-nous",
+    "footer_text": "© 2026 EcoMobile. Tous droits réservés.",
+    "footer_contact": "Besoin d'aide ? Contactez-nous",
     "unsubscribe": "Se désabonner"
-  },
-  "session": {
-    "fetch": {
-      "error": "Erreur lors de la récupération des sessions"
-    },
-    "not_found": "Session non trouvée",
-    "disconnect": {
-      "error": "Erreur lors de la déconnexion de la session"
-    },
-    "disconnect_all": {
-      "error": "Erreur lors de la déconnexion de toutes les sessions"
-    }
   },
   "device": {
     "unknown": "Appareil inconnu",
@@ -223,7 +322,6 @@
   "location": {
     "local": "Localisation locale",
     "cameroon": "Cameroun"
-<<<<<<< HEAD
   },
   "document": {
     "submitted": "Document soumis avec succès",
@@ -238,7 +336,5 @@
     "residence": {
       "already_submitted": "Une preuve de résidence est déjà en attente ou approuvée"
     }
-=======
->>>>>>> origin/main
   }
 }

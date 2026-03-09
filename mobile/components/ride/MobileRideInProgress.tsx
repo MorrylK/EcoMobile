@@ -168,28 +168,75 @@ export function MobileRideInProgress({
     const actualDurationSeconds = Math.floor(
       (Date.now() - new Date(ride.startTime).getTime()) / 1000
     );
-    const hourlyRate = ride.bike?.currentPricing?.hourlyRate ?? bike.currentPricing?.hourlyRate ?? 0;
+    const pricing = ride.bike?.currentPricing ?? bike.currentPricing ?? null;
+    const effectiveHourlyRate = pricing
+      ? pricing.displayPrice / pricing.durationHours
+      : null;
     const durationHours = actualDurationSeconds / 3600;
-    const calculatedCost = Math.ceil(durationHours * hourlyRate);
+    const calculatedCost = effectiveHourlyRate !== null ? Math.ceil(durationHours * effectiveHourlyRate) : 0;
+    // Alias pour les blocs ci-dessous
+    const hourlyRate = effectiveHourlyRate;
+
+    if (hourlyRate === null) {
+      setPriceInfo({
+        currentCost: 0,
+        willBeCharged: false,
+        message: 'Tarif non configuré',
+        isOvertime: false
+      });
+      return;
+    }
 
     if (subscription) {
-      const isOvertime = checkIfOvertime(ride.startTime, subscription.packageType);
-      if (isOvertime) {
-        const reductionPercentage = 50;
-        const finalCost = Math.round(calculatedCost * (1 - reductionPercentage / 100));
-        setPriceInfo({
-          currentCost: finalCost,
-          willBeCharged: finalCost > 0,
-          message: `Hors forfait - Réduction ${reductionPercentage}%`,
-          isOvertime: true
-        });
+      const sub = subscription as any;
+      if (sub.formulaType === 'DURATION') {
+        // Formule par durée totale
+        const remainingMin = sub.remainingRideMinutes ?? null;
+        if (remainingMin !== null && remainingMin <= 0) {
+          setPriceInfo({
+            currentCost: calculatedCost,
+            willBeCharged: true,
+            message: 'Crédit épuisé — tarif standard',
+            isOvertime: true
+          });
+        } else if (remainingMin !== null && durationHours * 60 > remainingMin) {
+          const overtimeH = Math.ceil((durationHours * 60 - remainingMin) / 60);
+          setPriceInfo({
+            currentCost: Math.ceil(overtimeH * hourlyRate!),
+            willBeCharged: true,
+            message: `Dépassement du crédit — ${Math.round(remainingMin)}min restantes`,
+            isOvertime: true
+          });
+        } else {
+          const hrStr = remainingMin !== null
+            ? `${Math.floor(remainingMin / 60)}h${remainingMin % 60 > 0 ? (remainingMin % 60) + 'min' : ''} restantes`
+            : '';
+          setPriceInfo({
+            currentCost: 0,
+            willBeCharged: false,
+            message: `Inclus · ${sub.planName ?? ''}${hrStr ? ' · ' + hrStr : ''}`,
+            isOvertime: false
+          });
+        }
       } else {
-        setPriceInfo({
-          currentCost: calculatedCost,
-          willBeCharged: false,
-          message: `Inclus dans ${subscription.planName}`,
-          isOvertime: false
-        });
+        const isOvertime = checkIfOvertime(ride.startTime, subscription.packageType);
+        if (isOvertime) {
+          const reductionPercentage = 50;
+          const finalCost = Math.round(calculatedCost * (1 - reductionPercentage / 100));
+          setPriceInfo({
+            currentCost: finalCost,
+            willBeCharged: finalCost > 0,
+            message: `Hors forfait - Réduction ${reductionPercentage}%`,
+            isOvertime: true
+          });
+        } else {
+          setPriceInfo({
+            currentCost: calculatedCost,
+            willBeCharged: false,
+            message: `Inclus dans ${subscription.planName}`,
+            isOvertime: false
+          });
+        }
       }
     } else if (freePlans.length > 0) {
       // Vérifier si le trajet est dans la plage horaire du forfait gratuit
@@ -665,9 +712,9 @@ export function MobileRideInProgress({
               <View style={[styles.row, styles.spaceBetween, styles.py8]}>
                 <Text variant="caption" color="muted">Tarif horaire</Text>
                 <Text variant="caption" weight="medium">
-                  {currentRide.bike?.currentPricing?.hourlyRate || bike.currentPricing?.hourlyRate ? 
-                  `${currentRide.bike?.currentPricing?.hourlyRate || bike.currentPricing?.hourlyRate} XOF/h` : 
-                  '--'}
+                  {(currentRide.bike?.currentPricing ?? bike.currentPricing)
+                    ? `${(currentRide.bike?.currentPricing ?? bike.currentPricing)!.displayPrice} XOF/${(currentRide.bike?.currentPricing ?? bike.currentPricing)!.durationHours}h`
+                    : '--'}
                 </Text>
               </View>
 

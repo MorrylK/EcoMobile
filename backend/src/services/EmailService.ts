@@ -1,4 +1,4 @@
-import nodemailer from 'nodemailer';
+import { Resend } from 'resend';
 import { config } from '../config/config';
 
 export interface EmailOptions {
@@ -14,31 +14,16 @@ export interface EmailTemplate {
   text?: string;
 }
 
+// Adresse expéditeur : utilise le domaine vérifié Resend si disponible, sinon le domaine de test
+const RESEND_FROM = process.env.RESEND_FROM || 'EcoMobile <onboarding@resend.dev>';
+
 class EmailService {
-  private transporter: any;
+  private resend: Resend | null = null;
 
   constructor() {
-    // Only create transporter if email is configured
-    if (this.isConfigured()) {
-      this.transporter = nodemailer.createTransport({
-        host: config.email.host,
-        port: config.email.port,
-        secure: config.email.secure, // true for 465, false for other ports
-        auth: {
-          user: config.email.user,
-          pass: config.email.password,
-        },
-      });
-    } else {
-      // In development, create a mock transporter
-      if (process.env.NODE_ENV === 'development') {
-        this.transporter = {
-          sendMail: async () => {
-            console.log('[DEV EMAIL] Email service not configured, skipping email send');
-            return { messageId: 'dev-mock-id' };
-          }
-        };
-      }
+    const apiKey = process.env.RESEND_API_KEY;
+    if (apiKey) {
+      this.resend = new Resend(apiKey);
     }
   }
 
@@ -46,51 +31,43 @@ class EmailService {
    * Check if email service is properly configured
    */
   isConfigured(): boolean {
-    return !!(
-      config.email.host &&
-      config.email.port &&
-      config.email.user &&
-      config.email.password &&
-      config.email.from
-    );
+    return !!process.env.RESEND_API_KEY;
   }
 
   /**
-   * Send an email
+   * Send an email via Resend
    */
   async sendEmail(options: EmailOptions): Promise<boolean> {
-    // In development, if email is not configured, just log instead of failing
-    if (!this.isConfigured()) {
-      if (process.env.NODE_ENV === 'development') {
-        console.log(`[DEV EMAIL] Would send email to: ${Array.isArray(options.to) ? options.to.join(', ') : options.to}`);
-        console.log(`[DEV EMAIL] Subject: ${options.subject}`);
+    if (!this.isConfigured() || !this.resend) {
+      if (process.env.NODE_ENV !== 'production') {
+        const to = Array.isArray(options.to) ? options.to.join(', ') : options.to;
+        console.log(`[DEV EMAIL] → ${to} | ${options.subject}`);
         return true;
-      } else {
-        throw new Error('Email service not configured');
       }
+      throw new Error('Email service not configured (RESEND_API_KEY manquant)');
     }
 
     try {
-      const recipients = Array.isArray(options.to) ? options.to.join(', ') : options.to;
-
-      const mailOptions = {
-        from: `"${config.email.fromName}" <${config.email.from}>`,
-        to: recipients,
+      const to = Array.isArray(options.to) ? options.to : [options.to];
+      const { error } = await this.resend.emails.send({
+        from: RESEND_FROM,
+        to,
         subject: options.subject,
         html: options.html,
         text: options.text || this.stripHtml(options.html),
-      };
+      });
 
-      await this.transporter.sendMail(mailOptions);
-      console.log(`Email sent successfully to: ${recipients}`);
+      if (error) {
+        console.error('Resend error:', error);
+        if (process.env.NODE_ENV !== 'production') return false;
+        throw new Error(error.message);
+      }
+
+      console.log(`Email sent via Resend to: ${to.join(', ')}`);
       return true;
     } catch (error) {
-      console.error('Error sending email:', error);
-      // In development, don't throw error if email fails
-      if (process.env.NODE_ENV === 'development') {
-        console.log(`[DEV EMAIL] Email sending failed, but continuing in development mode`);
-        return false;
-      }
+      console.error('Error sending email via Resend:', error);
+      if (process.env.NODE_ENV !== 'production') return false;
       throw error;
     }
   }
@@ -523,17 +500,10 @@ class EmailService {
   }
 
   /**
-   * Verify SMTP connection
+   * Verify Resend connection (teste l'envoi d'un email de sanity check)
    */
   async verifyConnection(): Promise<boolean> {
-    try {
-      await this.transporter.verify();
-      console.log('SMTP server is ready to send emails');
-      return true;
-    } catch (error) {
-      console.error('SMTP server verification failed:', error);
-      return false;
-    }
+    return this.isConfigured();
   }
 }
 

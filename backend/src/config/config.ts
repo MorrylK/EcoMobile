@@ -53,14 +53,14 @@ export const config = {
     refreshExpiresIn: process.env.JWT_REFRESH_EXPIRES_IN || '7d'
   },
 
+  // Email via Resend (gratuit jusqu'à 3 000 emails/mois)
+  // Ajouter RESEND_API_KEY dans .env — clé obtenue sur resend.com
+  // RESEND_FROM = "EcoMobile <noreply@votredomaine.com>" (domaine vérifié)
+  //              ou "EcoMobile <onboarding@resend.dev>" pour les tests
   email: {
-    host: process.env.SMTP_HOST || 'smtp.gmail.com',
-    port: parseInt(process.env.SMTP_PORT || '587', 10),
-    secure: process.env.SMTP_SECURE === 'true',
-    user: process.env.SMTP_USER || '',
-    password: process.env.SMTP_PASSWORD || '',
-    from: process.env.EMAIL_FROM || 'noreply@ecomobile.com',
-    fromName: process.env.EMAIL_FROM_NAME || 'FreeBike'
+    resendApiKey: process.env.RESEND_API_KEY || '',
+    from: process.env.RESEND_FROM || 'EcoMobile <onboarding@resend.dev>',
+    fromName: process.env.EMAIL_FROM_NAME || 'EcoMobile',
   },
 
   frontendUrl: process.env.FRONTEND_URL || 'http://localhost:3000',

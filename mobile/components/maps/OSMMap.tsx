@@ -244,27 +244,39 @@ export const OSMMap = forwardRef<OSMMapRef, OSMMapProps>(({
           const bikeIcon = leafletRef.current.divIcon({
             className: 'bike-marker',
             html: `
-              <div style="
-                background: ${batteryColor}; 
-                color: white; 
-                width: 32px; 
-                height: 32px; 
-                border-radius: 50%; 
-                border: 2px solid white; 
-                box-shadow: 0 2px 4px rgba(0,0,0,0.3);
-                display: flex; 
-                align-items: center; 
-                justify-content: center; 
-                font-size: 10px; 
-                font-weight: bold;
-                position: relative;
-                cursor: pointer;
-              ">
-                ${bike.batteryLevel}%
+              <div style="display:flex;flex-direction:column;align-items:center;gap:3px;cursor:pointer;">
+                <div style="
+                  background: ${batteryColor};
+                  color: white;
+                  width: 36px;
+                  height: 36px;
+                  border-radius: 50%;
+                  border: 2px solid white;
+                  box-shadow: 0 2px 6px rgba(0,0,0,0.35);
+                  display: flex;
+                  align-items: center;
+                  justify-content: center;
+                  font-size: 10px;
+                  font-weight: bold;
+                ">
+                  ${bike.batteryLevel}%
+                </div>
+                <div style="
+                  background: rgba(0,0,0,0.72);
+                  color: white;
+                  font-size: 9px;
+                  font-weight: 600;
+                  padding: 1px 5px;
+                  border-radius: 4px;
+                  white-space: nowrap;
+                  letter-spacing: 0.3px;
+                ">
+                  ${bike.code}
+                </div>
               </div>
             `,
-            iconSize: [36, 36],
-            iconAnchor: [18, 18]
+            iconSize: [46, 54],
+            iconAnchor: [23, 36]
           });
 
           const marker = leafletRef.current.marker([bike.latitude!, bike.longitude!], {

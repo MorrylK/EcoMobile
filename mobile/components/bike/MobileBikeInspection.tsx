@@ -1,10 +1,10 @@
 /* eslint-disable react-hooks/exhaustive-deps */
 import { Button } from '@/components/ui/Button';
 import { Card } from '@/components/ui/Card';
-import { Label } from '@/components/ui/Label';
 import { Text } from '@/components/ui/Text';
 import { Textarea } from '@/components/ui/Textarea';
 import { toast } from '@/components/ui/Toast';
+import { VerticalSlider } from '@/components/ui/VerticalSlider';
 import { useColorScheme } from '@/hooks/use-color-scheme';
 import { getGlobalStyles } from '@/styles/globalStyles';
 import { haptics } from '@/utils/haptics';
@@ -12,7 +12,7 @@ import { subscriptionService } from '@/services/subscriptionService';
 import { bikeRequestService } from '@/services/bikeRequestService';
 import { InternetStatusBar } from '@/components/ui/InternetStatusBar';
 import * as ImagePicker from 'expo-image-picker';
-import { AlertTriangle, ArrowLeft, Camera, Check, X } from 'lucide-react-native';
+import { AlertTriangle, ArrowLeft, CheckCheck, XCircle } from 'lucide-react-native';
 import React, { useState, useEffect } from 'react';
 import { ScrollView, TouchableOpacity, View, Alert, Image, Platform, KeyboardAvoidingView, TouchableWithoutFeedback, Keyboard } from 'react-native';
 import { useMobileI18n } from '@/lib/mobile-i18n';
@@ -49,8 +49,8 @@ interface InspectionData {
 interface InspectionItem {
   id: string;
   label: { fr: string; en: string };
-  isGood: boolean | null;
-  required: boolean;
+  value: number | null;   // 0-100 % ; null = non évalué
+  required: false;        // rien n'est obligatoire
 }
 
 export function MobileBikeInspection({ bikeId, bikeName, inspectionType, bikeEquipment, onComplete, onBack }: MobileBikeInspectionProps) {
@@ -121,48 +121,50 @@ export function MobileBikeInspection({ bikeId, bikeName, inspectionType, bikeEqu
       brakeLever: { fr: 'Levier de frein', en: 'Brake Lever' },
     };
 
+    const makeItem = (id: string, label: { fr: string; en: string }): InspectionItem =>
+      ({ id, label, value: null, required: false });
+
     const requiredItems: InspectionItem[] = [
-      { id: 'brakes', label: { fr: 'Freins', en: 'Brakes' }, isGood: null, required: true },
-      { id: 'tires', label: { fr: 'Pneus', en: 'Tires' }, isGood: null, required: true },
-      { id: 'battery', label: { fr: 'Batterie', en: 'Battery' }, isGood: null, required: true },
-      { id: 'chain', label: { fr: 'Chaîne', en: 'Chain' }, isGood: null, required: true },
-      { id: 'frontWheel', label: equipmentLabels.frontWheel, isGood: null, required: true },
-      { id: 'rearWheel', label: equipmentLabels.rearWheel, isGood: null, required: true },
-      { id: 'motor', label: equipmentLabels.motor, isGood: null, required: true },
-      { id: 'controllerBox', label: equipmentLabels.controllerBox, isGood: null, required: true },
-      { id: 'pedal', label: equipmentLabels.pedal, isGood: null, required: true },
+      makeItem('brakes',        { fr: 'Freins', en: 'Brakes' }),
+      makeItem('tires',         { fr: 'Pneus', en: 'Tires' }),
+      makeItem('battery',       { fr: 'Batterie', en: 'Battery' }),
+      makeItem('chain',         { fr: 'Chaîne', en: 'Chain' }),
+      makeItem('frontWheel',    equipmentLabels.frontWheel),
+      makeItem('rearWheel',     equipmentLabels.rearWheel),
+      makeItem('motor',         equipmentLabels.motor),
+      makeItem('controllerBox', equipmentLabels.controllerBox),
+      makeItem('pedal',         equipmentLabels.pedal),
     ];
 
     const optionalItems: InspectionItem[] = [
-      { id: 'seat', label: { fr: 'Selle', en: 'Seat' }, isGood: null, required: false },
-      { id: 'handlebars', label: { fr: 'Guidon', en: 'Handlebars' }, isGood: null, required: false },
-      { id: 'frame', label: { fr: 'Cadre', en: 'Frame' }, isGood: null, required: false },
-      { id: 'headlight', label: equipmentLabels.headlight, isGood: null, required: false },
-      { id: 'display', label: equipmentLabels.display, isGood: null, required: false },
-      { id: 'accelerator', label: equipmentLabels.accelerator, isGood: null, required: false },
-      { id: 'brakeLever', label: equipmentLabels.brakeLever, isGood: null, required: false },
-      { id: 'pedalSensor', label: equipmentLabels.pedalSensor, isGood: null, required: false },
-      { id: 'kickstand', label: equipmentLabels.kickstand, isGood: null, required: false },
-      { id: 'basket', label: equipmentLabels.basket, isGood: null, required: false },
+      makeItem('seat',        { fr: 'Selle', en: 'Seat' }),
+      makeItem('handlebars',  { fr: 'Guidon', en: 'Handlebars' }),
+      makeItem('frame',       { fr: 'Cadre', en: 'Frame' }),
+      makeItem('headlight',   equipmentLabels.headlight),
+      makeItem('display',     equipmentLabels.display),
+      makeItem('accelerator', equipmentLabels.accelerator),
+      makeItem('brakeLever',  equipmentLabels.brakeLever),
+      makeItem('pedalSensor', equipmentLabels.pedalSensor),
+      makeItem('kickstand',   equipmentLabels.kickstand),
+      makeItem('basket',      equipmentLabels.basket),
     ];
 
-    const equipmentItems: InspectionItem[] = (bikeEquipment || []).map(equipId => ({
-      id: equipId,
-      label: equipmentLabels[equipId] || { fr: equipId, en: equipId },
-      isGood: null,
-      required: false
-    }));
+    const equipmentItems: InspectionItem[] = (bikeEquipment || []).map(equipId =>
+      makeItem(equipId, equipmentLabels[equipId] || { fr: equipId, en: equipId })
+    );
 
     setInspectionItems([...requiredItems, ...optionalItems, ...equipmentItems]);
   };
 
-  const updateInspectionItem = (id: string, isGood: boolean) => {
-    haptics.selection();
+  const updateInspectionItem = (id: string, value: number) => {
     setInspectionItems(items =>
-      items.map(item =>
-        item.id === id ? { ...item, isGood } : item
-      )
+      items.map(item => item.id === id ? { ...item, value } : item)
     );
+  };
+
+  const setAllItems = (value: number) => {
+    haptics.medium();
+    setInspectionItems(items => items.map(item => ({ ...item, value })));
   };
 
   const showPhotoOptions = () => {
@@ -300,64 +302,62 @@ export function MobileBikeInspection({ bikeId, bikeName, inspectionType, bikeEqu
   };
 
   const handleComplete = async () => {
-    const requiredInspected = inspectionItems
-      .filter(item => item.required)
-      .every(item => item.isGood !== null);
-    
-    if (!requiredInspected) {
-      haptics.error();
-      toast.error('inspection.requiredItems');
-      return;
-    }
-
-    const requiredIssues = inspectionItems
-      .filter(item => item.required && !item.isGood)
-      .map(item => item.label[language]);
-
-    const optionalIssues = inspectionItems
-      .filter(item => !item.required && !item.isGood)
-      .map(item => item.label[language]);
-
-    const allIssues = [...requiredIssues, ...optionalIssues];
-    const hasRequiredIssues = requiredIssues.length > 0;
-    const hasAnyIssues = allIssues.length > 0;
-
-    if (hasRequiredIssues && !notes.trim()) {
-      haptics.error();
-      toast.error('inspection.notesRequiredForIssues');
-      return;
-    }
-
     if (isSubmitting) return;
-    
     setIsSubmitting(true);
 
     try {
+      // Éléments évalués
+      const evaluated = inspectionItems.filter(item => item.value !== null);
+      // Éléments en mauvais état (≤ 30%)
+      const badItems = evaluated.filter(item => (item.value ?? 100) <= 30);
+      // Éléments dégradés (31-69%)
+      const degradedItems = evaluated.filter(item => {
+        const v = item.value ?? 100;
+        return v > 30 && v <= 69;
+      });
+
+      const hasIssues = badItems.length > 0 || degradedItems.length > 0;
+      const hasCriticalIssues = badItems.length > 0;
+      const overallCondition = hasCriticalIssues ? 'damaged' : hasIssues ? 'acceptable' : 'good';
+
+      // Construire la liste des éléments avec leur score pour l'admin
+      const itemScores = inspectionItems
+        .filter(item => item.value !== null)
+        .map(item => ({
+          id: item.id,
+          label: item.label[language],
+          value: item.value,
+          state: (item.value ?? 100) <= 30 ? 'bad' : (item.value ?? 100) <= 69 ? 'degraded' : 'good',
+        }));
+
+      const allIssues = [...badItems, ...degradedItems].map(item => item.label[language]);
+
       const inspectionData = {
-        condition: hasRequiredIssues ? 'damaged' : (hasAnyIssues ? 'acceptable' : 'good'),
+        condition: overallCondition,
         issues: allIssues,
         notes,
         photos,
         metadata: {
           inspection: {
             type: inspectionType,
-            condition: hasRequiredIssues ? 'damaged' : (hasAnyIssues ? 'acceptable' : 'good'),
+            condition: overallCondition,
             issues: allIssues,
+            itemScores,            // ← envoyé à l'admin
             notes,
             photos,
             inspectedAt: new Date().toISOString(),
-            hasIssues: hasAnyIssues,
-            hasCriticalIssues: hasRequiredIssues
+            hasIssues,
+            hasCriticalIssues,
           },
-          paymentMethod: currentSubscription ? 'SUBSCRIPTION' : 'WALLET'
-        }
+          paymentMethod: currentSubscription ? 'SUBSCRIPTION' : 'WALLET',
+        },
       };
 
       if (inspectionType === 'pickup') {
         await bikeRequestService.createUnlockRequest(bikeId, inspectionData.metadata);
         
         haptics.success();
-        toast.success('unlock.requestSent');
+        toast.success(t('unlock.requestSent'));
         onComplete({type: 'unlock_request_sent', data: inspectionData});
       } else {
         onComplete(inspectionData);
@@ -371,18 +371,15 @@ export function MobileBikeInspection({ bikeId, bikeName, inspectionType, bikeEqu
     }
   };
 
-  const requiredItems = inspectionItems.filter(item => item.required);
-  const optionalItems = inspectionItems.filter(item => !item.required);
+  const requiredItems = inspectionItems.slice(0, 9);  // les 9 éléments principaux
+  const optionalItems = inspectionItems.slice(9);
+
+  const evaluatedCount = inspectionItems.filter(item => item.value !== null).length;
+  const totalCount = inspectionItems.length;
+  const allInspected = evaluatedCount === totalCount;
   
-  const requiredInspected = requiredItems.every(item => item.isGood !== null);
-  const allInspected = inspectionItems.every(item => item.isGood !== null);
-  
-  const requiredIssues = requiredItems.filter(item => item.isGood === false);
-  const optionalIssues = optionalItems.filter(item => item.isGood === false);
-  const allIssues = [...requiredIssues, ...optionalIssues];
-  
-  const hasRequiredIssues = requiredIssues.length > 0;
-  const hasAnyIssues = allIssues.length > 0;
+  const badItems = inspectionItems.filter(item => item.value !== null && item.value <= 30);
+  const hasAnyIssues = badItems.length > 0 || inspectionItems.some(item => item.value !== null && item.value <= 69 && item.value > 30);
 
   // Fonction pour cacher le clavier
   const dismissKeyboard = () => {
@@ -468,55 +465,56 @@ export function MobileBikeInspection({ bikeId, bikeName, inspectionType, bikeEqu
             </View>
           </Card>
 
-          {/* Inspection Items */}
+          {/* Inspection Items — sliders verticaux */}
           <TouchableWithoutFeedback onPress={dismissKeyboard}>
             <Card style={styles.p16}>
-              <View style={[styles.row, styles.spaceBetween, styles.alignCenter, styles.mb16]}>
+              <View style={[styles.row, styles.spaceBetween, styles.alignCenter, styles.mb12]}>
                 <Text variant="body" color={colorScheme === 'light' ? '#111827' : '#f9fafb'}>
                   {t('inspection.checkItems')}
                 </Text>
-                <Text size="xs" color={colorScheme === 'light' ? '#4b5563' : '#9ca3af'}>
-                  (*) = {t('inspection.required')}
-                </Text>
+                {/* Boutons Tout OK / Tout NOK */}
+                <View style={[styles.row, styles.gap8]}>
+                  <TouchableOpacity
+                    onPress={() => setAllItems(100)}
+                    style={{
+                      flexDirection: 'row', alignItems: 'center', gap: 4,
+                      paddingHorizontal: 8, paddingVertical: 4,
+                      backgroundColor: '#dcfce7', borderRadius: 6,
+                    }}
+                  >
+                    <CheckCheck size={12} color="#16a34a" />
+                    <Text size="xs" style={{ color: '#15803d', fontWeight: '600' }}>Tout OK</Text>
+                  </TouchableOpacity>
+                  <TouchableOpacity
+                    onPress={() => setAllItems(0)}
+                    style={{
+                      flexDirection: 'row', alignItems: 'center', gap: 4,
+                      paddingHorizontal: 8, paddingVertical: 4,
+                      backgroundColor: '#fee2e2', borderRadius: 6,
+                    }}
+                  >
+                    <XCircle size={12} color="#ef4444" />
+                    <Text size="xs" style={{ color: '#dc2626', fontWeight: '600' }}>Tout NOK</Text>
+                  </TouchableOpacity>
+                </View>
               </View>
-              <View style={styles.gap12}>
-                {/* Section des éléments obligatoires */}
-                {requiredItems.length > 0 && (
-                  <View style={styles.mb8}>
-                    <Text size="xs" color="#dc2626" style={[styles.mb8]}>
-                      {t('inspection.essentialItems')} *
-                    </Text>
-                    {requiredItems.map((item) => (
-                      <InspectionItemRow
-                        key={item.id}
-                        item={item}
-                        language={language}
-                        colorScheme={colorScheme}
-                        updateInspectionItem={updateInspectionItem}
-                        styles={styles}
-                      />
-                    ))}
-                  </View>
-                )}
 
-                {/* Section des éléments optionnels */}
-                {optionalItems.length > 0 && (
-                  <View>
-                    <Text size="xs" color={colorScheme === 'light' ? '#4b5563' : '#9ca3af'} style={[styles.mb8]}>
-                      {t('inspection.nonEssentialItems')}
-                    </Text>
-                    {optionalItems.map((item) => (
-                      <InspectionItemRow
-                        key={item.id}
-                        item={item}
-                        language={language}
-                        colorScheme={colorScheme}
-                        updateInspectionItem={updateInspectionItem}
-                        styles={styles}
-                      />
-                    ))}
-                  </View>
-                )}
+              <Text size="xs" color={colorScheme === 'light' ? '#6b7280' : '#9ca3af'} style={styles.mb12}>
+                Glissez chaque barre pour indiquer l'état (0 % = hors service, 100 % = parfait)
+              </Text>
+
+              {/* Grille de sliders */}
+              <View style={{ flexDirection: 'row', flexWrap: 'wrap', gap: 8, justifyContent: 'space-between' }}>
+                {inspectionItems.map((item) => (
+                  <VerticalSlider
+                    key={item.id}
+                    label={item.label[language]}
+                    value={item.value}
+                    onChange={(v) => updateInspectionItem(item.id, v)}
+                    height={110}
+                    colorScheme={colorScheme}
+                  />
+                ))}
               </View>
             </Card>
           </TouchableWithoutFeedback>
@@ -527,158 +525,39 @@ export function MobileBikeInspection({ bikeId, bikeName, inspectionType, bikeEqu
               <Text size="sm" color={colorScheme === 'light' ? '#111827' : '#f9fafb'}>
                 {t('inspection.progress')}
               </Text>
-              <View style={[styles.row, styles.gap8]}>
-                <Text size="sm" color="#dc2626">
-                  {requiredItems.filter(item => item.isGood !== null).length}/{requiredItems.length} *
-                </Text>
-                <Text size="sm" color={colorScheme === 'light' ? '#4b5563' : '#9ca3af'}>
-                  ({allInspected ? t('inspection.complete') : t('inspection.optional')})
-                </Text>
-              </View>
+              <Text size="sm" color={colorScheme === 'light' ? '#4b5563' : '#9ca3af'}>
+                {evaluatedCount}/{totalCount} {allInspected ? '✓' : ''}
+              </Text>
             </View>
-            
-            {/* Barre de progression pour les éléments requis */}
-            <View style={styles.mb4}>
-              <View style={[styles.row, styles.spaceBetween, styles.mb4]}>
-                <Text size="xs" color="#dc2626">{t('inspection.essentials')}</Text>
-                <Text size="xs" color="#dc2626">
-                  {requiredItems.filter(item => item.isGood !== null).length}/{requiredItems.length}
+            <View style={[styles.wT100, { height: 6 }, styles.rounded4, { backgroundColor: colorScheme === 'light' ? '#e5e7eb' : '#4b5563' }]}>
+              <View style={[{ height: 6 }, styles.rounded4, { backgroundColor: '#16a34a', width: `${(evaluatedCount / Math.max(totalCount, 1)) * 100}%` }]} />
+            </View>
+            {hasAnyIssues && (
+              <View style={[styles.row, styles.gap8, { marginTop: 8 }]}>
+                <AlertTriangle size={14} color="#f59e0b" />
+                <Text size="xs" color="#f59e0b">
+                  {badItems.length} élément(s) en mauvais état
                 </Text>
               </View>
-              <View 
-                style={[
-                  styles.wT100,
-                  { height: 6 },
-                  styles.rounded4,
-                  { backgroundColor: colorScheme === 'light' ? '#e5e7eb' : '#4b5563' }
-                ]}
-              >
-                <View 
-                  style={[
-                    { height: 6 },
-                    styles.rounded4,
-                    { 
-                      backgroundColor: requiredInspected ? '#16a34a' : '#dc2626',
-                      width: `${(requiredItems.filter(item => item.isGood !== null).length / requiredItems.length) * 100}%`
-                    }
-                  ]}
-                />
-              </View>
-            </View>
-
-            <View style={styles.mb16} />
-
-            {/* Barre de progression pour les éléments optionnels */}
-            <View>
-              <View style={[styles.row, styles.spaceBetween, styles.mb4]}>
-                <Text size="xs" color={colorScheme === 'light' ? '#4b5563' : '#9ca3af'}>{t('inspection.optionals')}</Text>
-                <Text size="xs" color={colorScheme === 'light' ? '#4b5563' : '#9ca3af'}>
-                  {optionalItems.filter(item => item.isGood !== null).length}/{optionalItems.length}
-                </Text>
-              </View>
-              <View 
-                style={[
-                  styles.wT100,
-                  { height: 6 },
-                  styles.rounded4,
-                  { backgroundColor: colorScheme === 'light' ? '#e5e7eb' : '#4b5563' }
-                ]}
-              >
-                <View 
-                  style={[
-                    { height: 6 },
-                    styles.rounded4,
-                    { 
-                      backgroundColor: '#3b82f6',
-                      width: `${(optionalItems.filter(item => item.isGood !== null).length / Math.max(optionalItems.length, 1)) * 100}%`
-                    }
-                  ]}
-                />
-              </View>
-            </View>
+            )}
           </Card>
 
-          {/* Issues Alert */}
-          {hasAnyIssues && (
-            <Card style={[styles.p16, { 
-              backgroundColor: colorScheme === 'light' ? '#fef3c7' : '#cf580e94', 
-              borderColor: hasRequiredIssues ? '#dc2626' : '#f59e0b' 
-            }]}>
-              <View style={[styles.row, styles.gap12]}>
-                <AlertTriangle 
-                  size={20} 
-                  color={hasRequiredIssues ? '#dc2626' : '#f59e0b'} 
-                  style={{ marginTop: 2 }} 
-                />
-                <View style={styles.flex1}>
-                  <Text size="sm" color={hasRequiredIssues ? '#ffffff' : '#ffffff'} style={[styles.mb4]}>
-                    {hasRequiredIssues 
-                      ? t('inspection.criticalIssues') 
-                      : t('inspection.minorIssues')}
-                  </Text>
-                  
-                  {/* Problèmes critiques */}
-                  {hasRequiredIssues && (
-                    <View style={styles.mb8}>
-                      <Text size="xs" color="#ffffff" style={[styles.mb4]}>
-                        {t('inspection.essentialItems')}:
-                      </Text>
-                      {requiredIssues.map(item => (
-                        <Text key={item.id} size="sm" color="#ffffff" style={styles.ml4}>
-                          • {item.label[language]} *
-                        </Text>
-                      ))}
-                    </View>
-                  )}
-
-                  {/* Problèmes mineurs */}
-                  {optionalIssues.length > 0 && (
-                    <View>
-                      <Text size="xs" color="#ffffff" style={[styles.mb4]}>
-                        {t('inspection.nonEssentialItems')}:
-                      </Text>
-                      {optionalIssues.map(item => (
-                        <Text key={item.id} size="sm" color="#ffffff" style={styles.ml4}>
-                          • {item.label[language]}
-                        </Text>
-                      ))}
-                    </View>
-                  )}
-                </View>
-              </View>
-            </Card>
-          )}
-
-          {/* Notes */}
-          {(hasAnyIssues || allInspected) && (
-            <TouchableWithoutFeedback onPress={dismissKeyboard}>
-              <Card style={styles.p16}>
-                <Label>
-                  {t('inspection.notes')} 
-                  {hasRequiredIssues && <Text color="#dc2626"> *</Text>}
-                </Label>
-                <Textarea
-                  value={notes}
-                  onChangeText={setNotes}
-                  placeholder={hasRequiredIssues 
-                    ? t('inspection.notesPlaceholderCritical')
-                    : (hasAnyIssues 
-                        ? t('inspection.notesPlaceholderRecommended')
-                        : t('inspection.notesPlaceholderOptional')
-                      )}
-                  style={[
-                    styles.mt8,
-                    hasRequiredIssues && !notes.trim() && { borderColor: '#dc2626', borderWidth: 2 }
-                  ]}
-                  multiline
-                  numberOfLines={4}
-                  onFocus={() => setIsKeyboardVisible(true)}
-                  onBlur={() => setIsKeyboardVisible(false)}
-                />
-                {hasRequiredIssues && !notes.trim() && (
-                  <Text size="xs" color="#dc2626" style={styles.mt4}>
-                    {t('inspection.notesRequiredForCritical')}
-                  </Text>
+          {/* Notes (toujours visibles) */}
+          <TouchableWithoutFeedback onPress={dismissKeyboard}>
+            <Card style={styles.p16}>
+              <Text size="sm" color={colorScheme === 'light' ? '#111827' : '#f9fafb'} style={styles.mb8}>
+                Commentaires (optionnel)
+              </Text>
+              <Textarea
+                value={notes}
+                onChangeText={setNotes}
+                placeholder="Décrivez les problèmes observés ou toute remarque utile…"
+                style={styles.mt8}
+                multiline
+                numberOfLines={3}
+                onFocus={() => setIsKeyboardVisible(true)}
+                onBlur={() => setIsKeyboardVisible(false)}
+              />
                 )}
                 {!hasRequiredIssues && hasAnyIssues && notes.trim() && (
                   <Text size="xs" color="#16a34a" style={styles.mt4}>
@@ -777,19 +656,18 @@ export function MobileBikeInspection({ bikeId, bikeName, inspectionType, bikeEqu
           )}
 
           {/* Complete Button */}
-          <Button 
+          <Button
             onPress={handleComplete}
             variant="primary"
             fullWidth
-            disabled={!requiredInspected || (hasRequiredIssues && !notes.trim()) || isLoading || isSubmitting}
+            disabled={isLoading || isSubmitting}
           >
             <View style={[styles.row, styles.gap4, styles.alignCenter]}>
-              <Check size={16} color="white" />
+              <CheckCheck size={16} color="white" />
               <Text style={styles.ml8} color="white">
-                {isSubmitting ? 
-                  t('common.sending') : 
-                  t(`inspection.${inspectionType === 'pickup' ? 'sendUnlockRequest' : 'returnBike'}`)
-                }
+                {isSubmitting
+                  ? t('common.sending')
+                  : t(`inspection.${inspectionType === 'pickup' ? 'sendUnlockRequest' : 'returnBike'}`)}
               </Text>
             </View>
           </Button>
@@ -806,77 +684,3 @@ export function MobileBikeInspection({ bikeId, bikeName, inspectionType, bikeEqu
   );
 }
 
-interface InspectionItemRowProps {
-  item: InspectionItem;
-  language: 'fr' | 'en';
-  colorScheme: string;
-  updateInspectionItem: (id: string, isGood: boolean) => void;
-  styles: any;
-}
-
-function InspectionItemRow({ item, language, colorScheme, updateInspectionItem, styles }: InspectionItemRowProps) {
-  return (
-    <View 
-      style={[
-        styles.row, 
-        styles.spaceBetween, 
-        styles.alignCenter, 
-        styles.p12, 
-        styles.rounded8,
-        styles.mb8,
-        { backgroundColor: colorScheme === 'light' ? '#f9fafb' : '#374151' }
-      ]}
-    >
-      <View style={[styles.row, styles.alignCenter, styles.gap8]}>
-        <Text size="sm" color={colorScheme === 'light' ? '#111827' : '#f9fafb'}>
-          {item.label[language]}
-        </Text>
-        {item.required && (
-          <Text size="xs" color="#dc2626">*</Text>
-        )}
-      </View>
-      <View style={[styles.row, styles.gap8]}>
-        <TouchableOpacity
-          onPress={() => updateInspectionItem(item.id, true)}
-          style={[
-            styles.w40,
-            styles.h40,
-            styles.rounded20,
-            styles.alignCenter,
-            styles.justifyCenter,
-            {
-              backgroundColor: item.isGood === true
-                ? '#16a34a'
-                : (colorScheme === 'light' ? '#e5e7eb' : '#4b5563')
-            }
-          ]}
-        >
-          <Check 
-            size={20} 
-            color={item.isGood === true ? 'white' : (colorScheme === 'light' ? '#111827' : '#9ca3af')} 
-          />
-        </TouchableOpacity>
-        <TouchableOpacity
-          onPress={() => updateInspectionItem(item.id, false)}
-          style={[
-            styles.w40,
-            styles.h40,
-            styles.rounded20,
-            styles.alignCenter,
-            styles.justifyCenter,
-            {
-              backgroundColor: item.isGood === false
-                ? '#ef4444'
-                : (colorScheme === 'light' ? '#e5e7eb' : '#4b5563')
-            }
-          ]}
-        >
-          <X 
-            size={20} 
-            color={item.isGood === false ? 'white' : (colorScheme === 'light' ? '#111827' : '#9ca3af')} 
-          />
-        </TouchableOpacity>
-      </View>
-    </View>
-  );
-}

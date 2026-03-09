@@ -60,6 +60,12 @@ export interface ActiveSubscription {
   chargeAfterHours: boolean;
   status: string;
   remainingDays: number;
+  // Nouveau système de tarification
+  formulaType?: string; // 'TIME_WINDOW' | 'DURATION'
+  maxRideDurationHours?: number | null;
+  usedRideMinutes?: number;
+  remainingRideMinutes?: number | null;
+  planName?: string;
 }
 
 class SubscriptionService {

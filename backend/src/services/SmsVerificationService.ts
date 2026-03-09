@@ -1,19 +1,26 @@
+import { Resend } from 'resend';
 import { prisma } from '../config/prisma';
 import { t } from '../locales';
 
+/**
+ * Vérification du numéro de téléphone via un code OTP envoyé par EMAIL (gratuit, aucun SMS).
+ * L'utilisateur saisit son numéro de téléphone, reçoit un email avec un code à 6 chiffres
+ * et le saisit dans l'application pour confirmer son numéro.
+ */
 export class SmsVerificationService {
-  /**
-   * Generate a random verification code (4-6 digits)
-   */
+  private resend: Resend | null = null;
+
+  constructor() {
+    const apiKey = process.env.RESEND_API_KEY;
+    if (apiKey) this.resend = new Resend(apiKey);
+  }
+
   generateVerificationCode(length: number = 6): string {
     const min = Math.pow(10, length - 1);
     const max = Math.pow(10, length) - 1;
     return Math.floor(Math.random() * (max - min + 1) + min).toString();
   }
 
-  /**
-   * Get expiration time for verification code (10 minutes)
-   */
   getCodeExpiration(): Date {
     const expires = new Date();
     expires.setMinutes(expires.getMinutes() + 10);
@@ -21,148 +28,83 @@ export class SmsVerificationService {
   }
 
   /**
-   * Send SMS verification code
-   * Supports multiple providers (Twilio, MessageBird, etc.)
+   * Envoyer le code OTP par email (remplace l'envoi SMS — gratuit via Resend)
    */
-  async sendVerificationCode(phoneNumber: string, code: string, language: 'fr' | 'en' = 'fr'): Promise<void> {
-    const smsProvider = process.env.SMS_PROVIDER || 'twilio';
-    
-    try {
-      switch (smsProvider.toLowerCase()) {
-        case 'twilio':
-          await this.sendViaTwilio(phoneNumber, code, language);
-          break;
-        case 'messagebird':
-          await this.sendViaMessageBird(phoneNumber, code, language);
-          break;
-        case 'mock':
-          // For development/testing - just log the code
-          console.log(`[MOCK SMS] Verification code for ${phoneNumber}: ${code}`);
-          break;
-        default:
-          // Fallback to mock in development
-          if (process.env.NODE_ENV === 'development') {
-            console.log(`[DEV SMS] Verification code for ${phoneNumber}: ${code}`);
-          } else {
-            throw new Error(`Unsupported SMS provider: ${smsProvider}`);
-          }
+  private async sendOtpByEmail(userEmail: string, phoneNumber: string, code: string, language: 'fr' | 'en'): Promise<void> {
+    if (!this.resend) {
+      console.log(`[DEV OTP] Code pour ${phoneNumber} (email: ${userEmail}) : ${code}`);
+      return;
+    }
+
+    const subject = language === 'fr'
+      ? 'Code de vérification de votre numéro — EcoMobile'
+      : 'Phone verification code — EcoMobile';
+
+    const html = `
+      <!DOCTYPE html><html><head><meta charset="UTF-8"></head>
+      <body style="font-family:sans-serif;background:#f4f4f4;margin:0;padding:20px;">
+        <div style="max-width:480px;margin:0 auto;background:#fff;border-radius:8px;overflow:hidden;">
+          <div style="background:#16a34a;padding:24px;text-align:center;">
+            <h1 style="color:#fff;margin:0;font-size:22px;">EcoMobile</h1>
+          </div>
+          <div style="padding:32px 24px;text-align:center;">
+            <p style="color:#374151;font-size:15px;margin-bottom:8px;">
+              ${language === 'fr'
+                ? `Code de vérification pour le numéro <strong>${phoneNumber}</strong> :`
+                : `Verification code for number <strong>${phoneNumber}</strong>:`}
+            </p>
+            <div style="font-size:36px;font-weight:700;letter-spacing:10px;color:#111827;margin:24px 0;padding:16px;background:#f9fafb;border-radius:8px;border:1px solid #e5e7eb;">
+              ${code}
+            </div>
+            <p style="color:#6b7280;font-size:13px;">
+              ${language === 'fr'
+                ? 'Ce code expire dans <strong>10 minutes</strong>. Ne le partagez jamais.'
+                : 'This code expires in <strong>10 minutes</strong>. Never share it.'}
+            </p>
+          </div>
+          <div style="background:#f9fafb;padding:16px;text-align:center;">
+            <p style="color:#9ca3af;font-size:12px;margin:0;">© ${new Date().getFullYear()} EcoMobile</p>
+          </div>
+        </div>
+      </body></html>
+    `;
+
+    const { error } = await this.resend.emails.send({
+      from: process.env.RESEND_FROM || 'EcoMobile <onboarding@resend.dev>',
+      to: [userEmail],
+      subject,
+      html,
+    });
+
+    if (error) {
+      console.error('Resend OTP email error:', error);
+      if (process.env.NODE_ENV !== 'production') {
+        console.log(`[DEV OTP] Code (fallback log) : ${code}`);
+        return;
       }
-    } catch (error) {
-      console.error('Failed to send SMS:', error);
-      // In development, we allow the code to be logged even if SMS fails
-      if (process.env.NODE_ENV === 'development') {
-        console.log(`[DEV SMS] Verification code for ${phoneNumber}: ${code}`);
-      } else {
-        throw error;
-      }
+      throw new Error(error.message);
     }
   }
 
   /**
-   * Send SMS via Twilio
-   */
-  private async sendViaTwilio(phoneNumber: string, code: string, language: 'fr' | 'en'): Promise<void> {
-    const accountSid = process.env.TWILIO_ACCOUNT_SID;
-    const authToken = process.env.TWILIO_AUTH_TOKEN;
-    const fromNumber = process.env.TWILIO_PHONE_NUMBER;
-
-    if (!accountSid || !authToken || !fromNumber) {
-      // In development, just log
-      if (process.env.NODE_ENV === 'development') {
-        console.log(`[TWILIO DEV] Would send code ${code} to ${phoneNumber}`);
-        return;
-      }
-      throw new Error('Twilio credentials not configured');
-    }
-
-    try {
-      // Dynamic import to avoid requiring twilio in production if not used
-      const twilio = require('twilio');
-      const client = twilio(accountSid, authToken);
-
-      const message = language === 'fr' 
-        ? `Votre code de vérification EcoMobile est: ${code}. Valide pendant 10 minutes.`
-        : `Your EcoMobile verification code is: ${code}. Valid for 10 minutes.`;
-
-      await client.messages.create({
-        body: message,
-        from: fromNumber,
-        to: phoneNumber
-      });
-    } catch (error: any) {
-      console.error('Twilio SMS error:', error);
-      // In development, allow fallback
-      if (process.env.NODE_ENV === 'development') {
-        console.log(`[TWILIO DEV] Code: ${code} for ${phoneNumber}`);
-        return;
-      }
-      throw new Error(`Failed to send SMS via Twilio: ${error.message}`);
-    }
-  }
-
-  /**
-   * Send SMS via MessageBird
-   */
-  private async sendViaMessageBird(phoneNumber: string, code: string, language: 'fr' | 'en'): Promise<void> {
-    const apiKey = process.env.MESSAGEBIRD_API_KEY;
-    const originator = process.env.MESSAGEBIRD_ORIGINATOR || 'EcoMobile';
-
-    if (!apiKey) {
-      if (process.env.NODE_ENV === 'development') {
-        console.log(`[MESSAGEBIRD DEV] Would send code ${code} to ${phoneNumber}`);
-        return;
-      }
-      throw new Error('MessageBird API key not configured');
-    }
-
-    try {
-      const messagebird = require('messagebird')(apiKey);
-      const message = language === 'fr' 
-        ? `Votre code de vérification EcoMobile est: ${code}. Valide pendant 10 minutes.`
-        : `Your EcoMobile verification code is: ${code}. Valid for 10 minutes.`;
-
-      await new Promise((resolve, reject) => {
-        messagebird.messages.create({
-          originator: originator,
-          recipients: [phoneNumber],
-          body: message
-        }, (err: any, response: any) => {
-          if (err) reject(err);
-          else resolve(response);
-        });
-      });
-    } catch (error: any) {
-      console.error('MessageBird SMS error:', error);
-      if (process.env.NODE_ENV === 'development') {
-        console.log(`[MESSAGEBIRD DEV] Code: ${code} for ${phoneNumber}`);
-        return;
-      }
-      throw new Error(`Failed to send SMS via MessageBird: ${error.message}`);
-    }
-  }
-
-  /**
-   * Initiate phone verification
+   * Initier la vérification du téléphone : génère un code et l'envoie par email
    */
   async initiatePhoneVerification(userId: string, phoneNumber: string, language: 'fr' | 'en' = 'fr'): Promise<string> {
-    // Generate verification code
     const code = this.generateVerificationCode(6);
     const expiresAt = this.getCodeExpiration();
 
-    // Update user with verification code
+    // Récupérer l'email de l'utilisateur pour lui envoyer le code
+    const user = await prisma.user.findUnique({ where: { id: userId }, select: { email: true } });
+    if (!user?.email) throw new Error(t('error.user_not_found', language));
+
     await prisma.user.update({
       where: { id: userId },
-      data: {
-        phone: phoneNumber,
-        phoneVerificationCode: code,
-        phoneVerificationExpires: expiresAt
-      }
+      data: { phone: phoneNumber, phoneVerificationCode: code, phoneVerificationExpires: expiresAt },
     });
 
-    // Send SMS
-    await this.sendVerificationCode(phoneNumber, code, language);
+    await this.sendOtpByEmail(user.email, phoneNumber, code, language);
 
-    return code; // Return code for development/testing
+    return code;
   }
 
   /**

@@ -2,6 +2,7 @@ import express from 'express';
 import { prisma } from '../config/prisma';
 import { AuthRequest, logActivity } from '../middleware/auth';
 import { t } from '../locales';
+import PricingTierService from '../services/PricingTierService';
 
 export class AdminController {
 
@@ -3750,6 +3751,89 @@ export class AdminController {
         success: false,
         message: error.message
       });
+    }
+  }
+
+  // ─── PricingTier CRUD ─────────────────────────────────────────────────────
+
+  async getPricingTiers(_req: AuthRequest, res: express.Response) {
+    try {
+      const tiers = await PricingTierService.getAllTiers();
+      return res.status(200).json({ success: true, data: { tiers } });
+    } catch (error: any) {
+      return res.status(500).json({ success: false, message: error.message });
+    }
+  }
+
+  async createPricingTier(req: AuthRequest, res: express.Response) {
+    try {
+      const { name, durationMinutes, price, dayStartHour, dayEndHour, isActive } = req.body;
+      if (!durationMinutes || price == null) {
+        return res.status(400).json({ success: false, message: 'durationMinutes et price sont requis' });
+      }
+      const result = await PricingTierService.createTier({ name, durationMinutes, price, dayStartHour, dayEndHour, isActive });
+      return res.status(201).json({ success: true, data: result });
+    } catch (error: any) {
+      return res.status(500).json({ success: false, message: error.message });
+    }
+  }
+
+  async updatePricingTier(req: AuthRequest, res: express.Response) {
+    try {
+      const { id } = req.params;
+      const result = await PricingTierService.updateTier(id, req.body);
+      return res.status(200).json({ success: true, data: result });
+    } catch (error: any) {
+      return res.status(500).json({ success: false, message: error.message });
+    }
+  }
+
+  async deletePricingTier(req: AuthRequest, res: express.Response) {
+    try {
+      const { id } = req.params;
+      await PricingTierService.deleteTier(id);
+      return res.status(200).json({ success: true, message: 'Palier supprimé' });
+    } catch (error: any) {
+      return res.status(500).json({ success: false, message: error.message });
+    }
+  }
+
+  async togglePricingTierActive(req: AuthRequest, res: express.Response) {
+    try {
+      const { id } = req.params;
+      const tier = await PricingTierService.toggleActive(id);
+      return res.status(200).json({ success: true, data: { tier } });
+    } catch (error: any) {
+      return res.status(500).json({ success: false, message: error.message });
+    }
+  }
+
+  async getPricingTierConflicts(_req: AuthRequest, res: express.Response) {
+    try {
+      const conflicts = await PricingTierService.getAllConflicts();
+      return res.status(200).json({ success: true, data: { conflicts } });
+    } catch (error: any) {
+      return res.status(500).json({ success: false, message: error.message });
+    }
+  }
+
+  async updateFallbackRate(req: AuthRequest, res: express.Response) {
+    try {
+      const { baseHourlyRate } = req.body;
+      if (baseHourlyRate == null || typeof baseHourlyRate !== 'number') {
+        return res.status(400).json({ success: false, message: 'baseHourlyRate (number) est requis' });
+      }
+      const config = await prisma.pricingConfig.findFirst({ where: { isActive: true } });
+      if (!config) {
+        return res.status(404).json({ success: false, message: 'Configuration introuvable' });
+      }
+      const updated = await prisma.pricingConfig.update({
+        where: { id: config.id },
+        data: { baseHourlyRate }
+      });
+      return res.status(200).json({ success: true, data: { baseHourlyRate: updated.baseHourlyRate } });
+    } catch (error: any) {
+      return res.status(500).json({ success: false, message: error.message });
     }
   }
 }

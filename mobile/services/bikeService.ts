@@ -17,12 +17,11 @@ export interface Bike {
   updatedAt: string;
   distance?: number;
   currentPricing?: {
-    hourlyRate: number;
-    originalHourlyRate: number;
+    displayPrice: number;
+    durationHours: number;
+    isNight: boolean;
+    isFallback: boolean;
     unlockFee: number;
-    appliedRule?: any;
-    appliedPromotions?: any[];
-    pricingPlan?: any;
   };
 }
 

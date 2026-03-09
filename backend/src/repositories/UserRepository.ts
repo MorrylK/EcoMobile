@@ -25,6 +25,7 @@ export class UserRepository extends BaseRepository<User> {
     lastName?: string;
     phone?: string;
     address?: string;
+    avatar?: string;
     emailVerified?: boolean;
     emailVerificationToken?: string | null;
     emailVerificationExpires?: Date | null;
@@ -56,6 +57,11 @@ export class UserRepository extends BaseRepository<User> {
     if (data.address !== undefined) {
       updateFields.push(`address = ${this.getPlaceholder(paramIndex++)}`);
       values.push(data.address);
+    }
+
+    if (data.avatar !== undefined) {
+      updateFields.push(`avatar = ${this.getPlaceholder(paramIndex++)}`);
+      values.push(data.avatar);
     }
 
     if (data.emailVerified !== undefined) {

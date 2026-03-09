@@ -95,6 +95,15 @@ router.put('/settings', requirePermission('settings', 'update'), AdminController
 router.get('/pricing', requirePermission('pricing', 'read'), AdminController.getPricing);
 router.put('/pricing', requirePermission('pricing', 'update'), AdminController.updatePricing);
 
+// PricingTier (tarification sans forfait)
+router.get('/pricing/tiers', requirePermission('pricing', 'read'), AdminController.getPricingTiers);
+router.post('/pricing/tiers', requirePermission('pricing', 'create'), AdminController.createPricingTier);
+router.get('/pricing/tiers/conflicts', requirePermission('pricing', 'read'), AdminController.getPricingTierConflicts);
+router.put('/pricing/tiers/:id', requirePermission('pricing', 'update'), AdminController.updatePricingTier);
+router.delete('/pricing/tiers/:id', requirePermission('pricing', 'delete'), AdminController.deletePricingTier);
+router.put('/pricing/tiers/:id/toggle', requirePermission('pricing', 'update'), AdminController.togglePricingTierActive);
+router.put('/pricing/fallback', requirePermission('pricing', 'update'), AdminController.updateFallbackRate);
+
 // Legacy promotions endpoints (kept for backward compatibility)
 router.get('/promotions', requirePermission('pricing', 'read'), AdminController.getPromotions);
 router.post('/promotions', requirePermission('pricing', 'create'), AdminController.createPromotion);

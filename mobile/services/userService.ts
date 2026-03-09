@@ -8,6 +8,7 @@ export interface UpdateProfileData {
   lastName?: string;
   email?: string;
   phone?: string;
+  avatar?: string;
   language?: 'fr' | 'en';
 }
 

@@ -88,8 +88,9 @@ export function MobileBikeDetails({ bike: initialBike, onBack, onNavigate }: Mob
       setCurrentSubscription(subscription);
 
       // Calculer le prix et la logique de facturation
-      const hourlyRate = initialBike.currentPricing?.hourlyRate || 200;
-      const estimatedCost = hourlyRate * 0.5;
+      const displayPrice = initialBike.currentPricing?.displayPrice ?? null;
+      const durationHours = initialBike.currentPricing?.durationHours ?? 1;
+      const estimatedCost = displayPrice != null ? displayPrice : null;
 
       if (subscription) {
         setPriceInfo({
@@ -168,7 +169,6 @@ export function MobileBikeDetails({ bike: initialBike, onBack, onNavigate }: Mob
   };
 
   const currentPricing = bike.currentPricing;
-  const hasPromotions = currentPricing?.appliedPromotions && currentPricing.appliedPromotions.length > 0;
 
   return (
     <View style={styles.container}>
@@ -243,26 +243,20 @@ export function MobileBikeDetails({ bike: initialBike, onBack, onNavigate }: Mob
                 <View>
                   <Text size="sm" color={colorScheme === 'light' ? '#6b7280' : '#9ca3af'}>
                     {t('bike.price')}
+                    {currentPricing.isNight ? ' (nuit)' : ''}
                   </Text>
                   <View style={[styles.row, styles.alignCenter, styles.gap4]}>
                     <Text size="2xl" color="#16a34a" weight="bold">
-                      {currentPricing.hourlyRate} XOF
+                      {currentPricing.displayPrice} XOF
                     </Text>
                     <Text size="sm" color="#16a34a">
-                      /h
+                      /{currentPricing.durationHours}h
                     </Text>
                   </View>
-                  {hasPromotions && (
-                    <View style={[styles.row, styles.alignCenter, styles.gap4, styles.mt4]}>
-                      <Text size="xs" color="#6b7280" style={{ textDecorationLine: 'line-through' }}>
-                        {currentPricing.originalHourlyRate} XOF/h
-                      </Text>
-                      <Badge variant="default" size="sm">
-                        <Text color="white" size="xs">
-                          {currentPricing.appliedPromotions![0].name}
-                        </Text>
-                      </Badge>
-                    </View>
+                  {currentPricing.isFallback && (
+                    <Text size="xs" color={colorScheme === 'light' ? '#6b7280' : '#9ca3af'} style={styles.mt4}>
+                      Tarif horaire de base
+                    </Text>
                   )}
                   
                   {/* Subscription Status */}
@@ -277,7 +271,7 @@ export function MobileBikeDetails({ bike: initialBike, onBack, onNavigate }: Mob
                           {priceInfo.message}
                         </Text>
                       </View>
-                      {priceInfo.willBeCharged && (
+                      {priceInfo.willBeCharged && priceInfo.amount != null && (
                         <Text size="xs" color="#6b7280" style={styles.mt4}>
                           {t('bike.details.estimatedCost', { amount: priceInfo.amount })}
                         </Text>

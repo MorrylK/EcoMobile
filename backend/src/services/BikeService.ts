@@ -6,6 +6,7 @@ import GpsService from './GpsService';
 import OpenStreetMapService from './OpenStreetMapService';
 import { AppError } from '../middleware/errorHandler';
 import { t } from '../locales';
+import PricingTierService from './PricingTierService';
 
 export interface CreateBikeDto {
   code: string;
@@ -1298,80 +1299,21 @@ export class BikeService {
   }
 
   /**
-   * Calculer le pricing actuel pour un vélo
+   * Calculer le pricing actuel pour un vélo.
+   * Utilise le système PricingTier (paliers tarifaires) — aucun prix codé en dur.
    */
-  private async calculateCurrentPricing(bike: any): Promise<any | null> {
-    if (!bike.pricingPlan) {
-      // Pas de plan assigné au vélo → toujours utiliser le tarif de base de la PricingConfig
-      const pricingConfig = await prisma.pricingConfig.findFirst({ where: { isActive: true } });
-      if (!pricingConfig) return null;
-      return {
-        hourlyRate: pricingConfig.baseHourlyRate,
-        originalHourlyRate: pricingConfig.baseHourlyRate,
-        unlockFee: pricingConfig.unlockFee,
-        appliedRule: null,
-        appliedPromotions: [],
-        pricingPlan: null,
-      };
-    }
-
-    const now = new Date();
-    const currentHour = now.getHours();
-    const dayOfWeek = now.getDay();
-
-    // Trouver les règles applicables
-    const rules = await prisma.pricingRule.findMany({
-      where: {
-        pricingConfigId: bike.pricingPlan.pricingConfig.id,
-        isActive: true,
-        OR: [
-          { dayOfWeek: null },
-          { dayOfWeek: dayOfWeek }
-        ]
-      },
-      orderBy: { priority: 'desc' }
-    });
-
-    const applicableRule = rules.find(rule => {
-      if (rule.startHour !== null && rule.endHour !== null) {
-        if (rule.startHour <= rule.endHour) {
-          return currentHour >= rule.startHour && currentHour < rule.endHour;
-        } else {
-          return currentHour >= rule.startHour || currentHour < rule.endHour;
-        }
-      }
-      return true;
-    });
-
-    const multiplier = applicableRule?.multiplier || 1;
-    let finalHourlyRate = Math.round(bike.pricingPlan.hourlyRate * multiplier);
-
-    // Appliquer les promotions
-    const activePromotions = bike.pricingPlan.promotions
-      ?.map((pp: any) => pp.promotion)
-      ?.filter((p: any) => p?.isActive) || [];
-
-    let appliedPromotions: any[] = [];
-    
-    activePromotions.forEach((promotion: any) => {
-      if (promotion.usageLimit === null || promotion.usageCount < promotion.usageLimit) {
-        if (promotion.discountType === 'PERCENTAGE') {
-          const discountAmount = promotion.discountValue / 100;
-          finalHourlyRate = Math.round(finalHourlyRate * (1 - discountAmount));
-        } else {
-          finalHourlyRate = Math.max(0, finalHourlyRate - promotion.discountValue);
-        }
-        appliedPromotions.push(promotion);
-      }
-    });
+  private async calculateCurrentPricing(_bike: any): Promise<any> {
+    const [display, pricingConfig] = await Promise.all([
+      PricingTierService.getDisplayPrice(),
+      prisma.pricingConfig.findFirst({ where: { isActive: true } })
+    ]);
 
     return {
-      hourlyRate: finalHourlyRate,
-      originalHourlyRate: bike.pricingPlan.hourlyRate,
-      unlockFee: bike.pricingPlan.pricingConfig.unlockFee,
-      appliedRule: applicableRule,
-      appliedPromotions,
-      pricingPlan: bike.pricingPlan
+      displayPrice: display.price,
+      durationHours: display.durationHours,
+      isNight: display.isNight,
+      isFallback: display.fallback,
+      unlockFee: pricingConfig?.unlockFee ?? 0,
     };
   }
 

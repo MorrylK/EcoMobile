@@ -9,9 +9,10 @@ import { bikeService } from '@/services/bikeService';
 import type { Bike } from '@/services/bikeService';
 import { getGlobalStyles } from '@/styles/globalStyles';
 import { haptics } from '@/utils/haptics';
-import { Camera, Hash, ScanLine, Type, Zap } from 'lucide-react-native';
+import { CameraView, useCameraPermissions } from 'expo-camera';
+import { Hash, ScanLine, Type, Zap } from 'lucide-react-native';
 import React, { useState } from 'react';
-import { ScrollView, View } from 'react-native';
+import { ScrollView, StyleSheet, View } from 'react-native';
 import { useMobileI18n } from '@/lib/mobile-i18n';
 import { MobileHeader } from '@/components/layout/MobileHeader';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/Tabs';
@@ -28,18 +29,47 @@ export function MobileQRScanner({ onBikeFound, onBack }: MobileQRScannerProps) {
   const colors = Colors[colorScheme === 'dark' ? 'dark' : 'light'];
   const [manualCode, setManualCode] = useState('');
   const [isScanning, setIsScanning] = useState(false);
+  const [scanned, setScanned] = useState(false);
   const [activeTab, setActiveTab] = useState('scan');
   const [isSearching, setIsSearching] = useState(false);
+  const [permission, requestPermission] = useCameraPermissions();
 
-  const handleScan = () => {
+  const handleScan = async () => {
+    if (!permission?.granted) {
+      const result = await requestPermission();
+      if (!result.granted) {
+        toast.error(t('qr.cameraPermissionDenied'));
+        return;
+      }
+    }
+    setScanned(false);
     setIsScanning(true);
     haptics.light();
-    
-    // TODO: Integrate with camera QR scanner
-    setTimeout(() => {
-      setIsScanning(false);
-      toast.info(t('qr.scannerNotImplemented'));
-    }, 2000);
+  };
+
+  const handleBarcodeScanned = async ({ data }: { type: string; data: string }) => {
+    if (scanned || isSearching) return;
+    setScanned(true);
+    setIsScanning(false);
+
+    try {
+      setIsSearching(true);
+      const bike = await bikeService.getBikeByCode(data.trim());
+
+      if (bike.status === 'AVAILABLE') {
+        haptics.success();
+        toast.success(t('qr.bikeFound'));
+        onBikeFound(bike);
+      } else {
+        haptics.error();
+        toast.error(t('qr.bikeUnavailable'));
+      }
+    } catch (error) {
+      haptics.error();
+      toast.error(t('qr.invalidCode'));
+    } finally {
+      setIsSearching(false);
+    }
   };
 
   const handleManualSubmit = async () => {
@@ -51,7 +81,7 @@ export function MobileQRScanner({ onBikeFound, onBack }: MobileQRScannerProps) {
     try {
       setIsSearching(true);
       const bike = await bikeService.getBikeByCode(manualCode.trim());
-      
+
       if (bike.status === 'AVAILABLE') {
         haptics.success();
         toast.success(t('qr.bikeFound'));
@@ -72,7 +102,7 @@ export function MobileQRScanner({ onBikeFound, onBack }: MobileQRScannerProps) {
     <View style={styles.container}>
       <MobileHeader title={t('qr.title')} showBack onBack={onBack} />
 
-      <ScrollView 
+      <ScrollView
         style={styles.scrollView}
         contentContainerStyle={[styles.scrollContentPadded, { gap: 32 }]}
         showsVerticalScrollIndicator={false}
@@ -80,7 +110,7 @@ export function MobileQRScanner({ onBikeFound, onBack }: MobileQRScannerProps) {
         <Tabs value={activeTab} onValueChange={setActiveTab}>
           <TabsList style={{ marginBottom: 24 }}>
             <TabsTrigger value="scan" style={styles.row}>
-              <Camera size={18} color={colors.text} />
+              <ScanLine size={18} color={colors.text} />
               <Text style={styles.ml8}>
                 {t('qr.scan')}
               </Text>
@@ -94,70 +124,66 @@ export function MobileQRScanner({ onBikeFound, onBack }: MobileQRScannerProps) {
           </TabsList>
 
           <TabsContent value="scan" style={{ gap: 24 }}>
-            <View 
+            <View
               style={[
-                { 
-                  aspectRatio: 1, 
+                {
+                  aspectRatio: 1,
                   backgroundColor: '#111827',
-                  padding: 24
+                  overflow: 'hidden'
                 },
                 styles.alignCenter,
                 styles.justifyCenter,
                 styles.rounded12
               ]}
             >
-              {!isScanning ? (
+              {isScanning ? (
+                <CameraView
+                  style={StyleSheet.absoluteFillObject}
+                  facing="back"
+                  barcodeScannerSettings={{ barcodeTypes: ['qr'] }}
+                  onBarcodeScanned={handleBarcodeScanned}
+                >
+                  <View style={[StyleSheet.absoluteFillObject, styles.alignCenter, styles.justifyCenter]}>
+                    <View
+                      style={{
+                        width: 200,
+                        height: 200,
+                        borderWidth: 2,
+                        borderColor: '#10b981',
+                        borderRadius: 12
+                      }}
+                    />
+                    <Text color="white" size="sm" style={[styles.textCenter, { marginTop: 16 }]}>
+                      {t('qr.instructions')}
+                    </Text>
+                  </View>
+                </CameraView>
+              ) : (
                 <View style={[styles.alignCenter, { gap: 16, padding: 32 }]}>
-                  <Camera size={64} color="#9ca3af" />
-                  <Text 
-                    color="#9ca3af" 
+                  <ScanLine size={64} color="#9ca3af" />
+                  <Text
+                    color="#9ca3af"
                     style={[styles.textCenter, { lineHeight: 20 }]}
                     size="md"
                   >
                     {t('qr.tapToScan')}
                   </Text>
                 </View>
-              ) : (
-                <View style={[styles.alignCenter, styles.justifyCenter, { gap: 24 }]}>
-                  <View 
-                    style={[
-                      { width: 256, height: 256, padding: 16 },
-                      { borderWidth: 2, borderColor: '#10b981', borderRadius: 12 },
-                      styles.alignCenter,
-                      styles.justifyCenter
-                    ]}
-                  >
-                    <ScanLine size={48} color="#10b981" />
-                  </View>
-                  <Text color="white" size="md" style={styles.textCenter}>
-                    {t('qr.instructions')}
-                  </Text>
-                </View>
               )}
             </View>
 
             <Button
-              onPress={handleScan}
-              disabled={isScanning}
+              onPress={isScanning ? () => setIsScanning(false) : handleScan}
               variant="primary"
               fullWidth
               style={{ height: 56 }}
             >
-              {isScanning ? (
-                <View style={[styles.row, styles.gap4, styles.alignCenter, styles.justifyCenter]}>
-                  <ScanLine size={20} color="white" />
-                  <Text style={styles.ml8} color="white" size="lg">
-                    {t('qr.scanning')}
-                  </Text>
-                </View>
-              ) : (
-                <View style={[styles.row, styles.gap4, styles.alignCenter, styles.justifyCenter]}>
-                  <Camera size={20} color="white" />
-                  <Text style={styles.ml8} color="white" size="lg">
-                    {t('qr.startScanning')}
-                  </Text>
-                </View>
-              )}
+              <View style={[styles.row, styles.gap4, styles.alignCenter, styles.justifyCenter]}>
+                <ScanLine size={20} color="white" />
+                <Text style={styles.ml8} color="white" size="lg">
+                  {isScanning ? t('qr.stopScanning') : t('qr.startScanning')}
+                </Text>
+              </View>
             </Button>
           </TabsContent>
 
@@ -172,11 +198,11 @@ export function MobileQRScanner({ onBikeFound, onBack }: MobileQRScannerProps) {
                     value={manualCode}
                     onChangeText={setManualCode}
                     placeholder="BIKE001"
-                    style={{ 
-                      height: 56, 
-                      fontSize: 18, 
-                      textAlign: 'center', 
-                      letterSpacing: 2 
+                    style={{
+                      height: 56,
+                      fontSize: 18,
+                      textAlign: 'center',
+                      letterSpacing: 2
                     }}
                   />
                 </View>

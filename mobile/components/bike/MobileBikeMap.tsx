@@ -654,10 +654,10 @@ export function MobileBikeMap({ onNavigate }: MobileBikeMapProps) {
                   <View style={[styles.flex1, styles.card, { padding: 16, alignItems: 'center' }]}>
                     <Zap size={24} color="#5D5CDE" />
                     <Text variant="body" style={{ marginTop: 8 }}>
-                      {selectedBike.currentPricing?.hourlyRate || '--'} XOF
+                      {selectedBike.currentPricing?.displayPrice ?? '--'} XOF
                     </Text>
                     <Text size="sm" color="#6b7280">
-                      /heure
+                      /{selectedBike.currentPricing?.durationHours ?? 1}h
                     </Text>
                   </View>
                 </View>
@@ -1068,8 +1068,8 @@ export function MobileBikeMap({ onNavigate }: MobileBikeMapProps) {
 
                       <View style={[styles.row, styles.spaceBetween, styles.alignCenter]}>
                         <Text size="sm" color={colorScheme === 'light' ? '#111827' : '#f9fafb'}>
-                          {bike.currentPricing 
-                            ? `${bike.currentPricing.hourlyRate} XOF/h`
+                          {bike.currentPricing
+                            ? `${bike.currentPricing.displayPrice} XOF/${bike.currentPricing.durationHours}h`
                             : t('map.priceUnavailable')}
                         </Text>
                         <Button

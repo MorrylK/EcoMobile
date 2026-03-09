@@ -29,6 +29,8 @@ export default function MobileEditProfile({ onNavigate }: MobileEditProfileProps
   const [isEditing, setIsEditing] = useState(false);
   const [showImageModal, setShowImageModal] = useState(false);
   const [selectedImage, setSelectedImage] = useState<string | null>(null);
+  const [selectedImageBase64, setSelectedImageBase64] = useState<string | null>(null);
+  const [isUploadingImage, setIsUploadingImage] = useState(false);
   
   const [formData, setFormData] = useState({
     firstName: user?.firstName || '',
@@ -117,14 +119,15 @@ export default function MobileEditProfile({ onNavigate }: MobileEditProfileProps
         mediaTypes: ImagePicker.MediaTypeOptions.Images,
         allowsEditing: true,
         aspect: [1, 1],
-        quality: 0.8,
-        base64: false,
+        quality: 0.7,
+        base64: true,
       });
 
       if (!result.canceled && result.assets && result.assets[0]) {
-        const imageUri = result.assets[0].uri;
-        if (imageUri) {
-          setSelectedImage(imageUri);
+        const asset = result.assets[0];
+        if (asset.uri) {
+          setSelectedImage(asset.uri);
+          setSelectedImageBase64(asset.base64 || null);
           setShowImageModal(true);
         }
       }
@@ -134,15 +137,52 @@ export default function MobileEditProfile({ onNavigate }: MobileEditProfileProps
     }
   };
 
-  const confirmImageChange = () => {
-    // TODO: Implémenter l'upload de l'image vers le backend
-    toast.success(t('profile.edit.photoUpdated'));
-    setShowImageModal(false);
-    setSelectedImage(null);
+  const confirmImageChange = async () => {
+    if (!selectedImageBase64 || !selectedImage) return;
+
+    setIsUploadingImage(true);
+    try {
+      const { authService } = await import('@/services/authService');
+      const { API_CONFIG } = await import('@/lib/api/config');
+      const token = await authService.getToken();
+
+      // Determine mime type from URI
+      const ext = selectedImage.split('.').pop()?.toLowerCase();
+      const mime = ext === 'png' ? 'image/png' : ext === 'webp' ? 'image/webp' : 'image/jpeg';
+      const dataUri = `data:${mime};base64,${selectedImageBase64}`;
+
+      // Upload image via chat attachments endpoint
+      const uploadResponse = await fetch(`${API_CONFIG.BASE_URL}/chat/attachments`, {
+        method: 'POST',
+        headers: { ...API_CONFIG.HEADERS, Authorization: `Bearer ${token}` },
+        body: JSON.stringify({ base64: dataUri }),
+      });
+
+      const uploadResult = await uploadResponse.json();
+      if (!uploadResult.success) throw new Error('upload_failed');
+
+      const avatarUrl: string = uploadResult.data.url;
+
+      // Save avatar URL to user profile
+      await updateProfile({ avatar: avatarUrl } as any);
+      await refreshUser();
+
+      haptics.success();
+      toast.success(t('profile.edit.photoUpdated'));
+      setShowImageModal(false);
+      setSelectedImage(null);
+      setSelectedImageBase64(null);
+    } catch (error) {
+      haptics.error();
+      toast.error(t('profile.edit.photoUploadError'));
+    } finally {
+      setIsUploadingImage(false);
+    }
   };
 
   const cancelImageChange = () => {
     setSelectedImage(null);
+    setSelectedImageBase64(null);
     setShowImageModal(false);
   };
 
@@ -585,16 +625,17 @@ export default function MobileEditProfile({ onNavigate }: MobileEditProfileProps
                   styles.flex1,
                   styles.p12,
                   styles.rounded8,
-                  { backgroundColor: '#16a34a' }
+                  { backgroundColor: isUploadingImage ? '#6b7280' : '#16a34a' }
                 ]}
                 onPress={confirmImageChange}
+                disabled={isUploadingImage}
               >
-                <Text 
+                <Text
                   style={styles.textCenter}
                   color="white"
                   weight="medium"
                 >
-                  {t('profile.edit.confirm')}
+                  {isUploadingImage ? t('common.loading') : t('profile.edit.confirm')}
                 </Text>
               </TouchableOpacity>
             </View>

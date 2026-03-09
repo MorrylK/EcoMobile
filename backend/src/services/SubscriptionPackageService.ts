@@ -50,6 +50,13 @@ class SubscriptionPackageService {
 
     if (!subscription) return null;
 
+    const formula = subscription.formula as any;
+    const isDuration = formula?.formulaType === 'DURATION';
+    const maxMinutes = isDuration && formula?.maxRideDurationHours
+      ? formula.maxRideDurationHours * 60
+      : null;
+    const usedMinutes = (subscription as any).usedRideMinutes ?? 0;
+
     return {
       id: subscription.id,
       packageName: subscription.package?.name ?? '',
@@ -62,6 +69,11 @@ class SubscriptionPackageService {
       dayStartHour: subscription.formula?.dayStartHour ?? 0,
       dayEndHour: subscription.formula?.dayEndHour ?? 0,
       chargeAfterHours: subscription.formula?.chargeAfterHours ?? false,
+      // Nouveau système : type de formule
+      formulaType: formula?.formulaType ?? 'TIME_WINDOW',
+      maxRideDurationHours: formula?.maxRideDurationHours ?? null,
+      usedRideMinutes: usedMinutes,
+      remainingRideMinutes: maxMinutes !== null ? Math.max(0, maxMinutes - usedMinutes) : null,
       status: 'ACTIVE',
       remainingDays: Math.ceil(
         (subscription.endDate.getTime() - new Date().getTime()) / (1000 * 60 * 60 * 24)
@@ -98,12 +110,13 @@ class SubscriptionPackageService {
     }
 
     const startDate = data.startDate || new Date();
+    const resetHour = formula.dayStartHour ?? 0;
     const dayResetTime = new Date(startDate);
-    dayResetTime.setHours(formula.dayStartHour, 0, 0, 0);
+    dayResetTime.setHours(resetHour, 0, 0, 0);
 
     const endDate = new Date(startDate);
     endDate.setDate(endDate.getDate() + formula.numberOfDays);
-    endDate.setHours(formula.dayStartHour, 0, 0, 0);
+    endDate.setHours(resetHour, 0, 0, 0);
 
     // Create subscription in transaction
     const result = await prisma.$transaction(async (tx) => {

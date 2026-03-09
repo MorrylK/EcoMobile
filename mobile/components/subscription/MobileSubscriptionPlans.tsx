@@ -9,11 +9,12 @@ import { subscriptionService, SubscriptionPackage, SubscriptionFormula, ActiveSu
 import { walletService } from '@/services/walletService';
 import { getGlobalStyles } from '@/styles/globalStyles';
 import { haptics } from '@/utils/haptics';
-import { ArrowLeft, Check, CreditCard, Star, X } from 'lucide-react-native';
+import { Check, CreditCard, Star, X, Clock, Moon, Sun, Wallet } from 'lucide-react-native';
 import React, { useEffect, useState } from 'react';
 import { ScrollView, TouchableOpacity, View, Alert, Modal } from 'react-native';
 import { useMobileI18n } from '@/lib/mobile-i18n';
 import { useMobileAuth } from '@/lib/mobile-auth';
+import { MobileHeader } from '@/components/layout/MobileHeader';
 
 interface MobileSubscriptionPlansProps {
   onBack: () => void;
@@ -25,7 +26,8 @@ export function MobileSubscriptionPlans({ onBack, onNavigate }: MobileSubscripti
   const { user } = useMobileAuth();
   const colorScheme = useColorScheme();
   const styles = getGlobalStyles(colorScheme);
-  
+  const isDark = colorScheme === 'dark';
+
   const [packages, setPackages] = useState<SubscriptionPackage[]>([]);
   const [selectedPackageId, setSelectedPackageId] = useState<string>('');
   const [selectedFormula, setSelectedFormula] = useState<SubscriptionFormula | null>(null);
@@ -49,7 +51,6 @@ export function MobileSubscriptionPlans({ onBack, onNavigate }: MobileSubscripti
       setIsLoading(true);
       const availablePackages = await subscriptionService.getAvailablePackages();
       setPackages(availablePackages);
-      
       if (availablePackages.length > 0) {
         setSelectedPackageId(availablePackages[0].id);
         setSelectedPackage(availablePackages[0]);
@@ -101,9 +102,7 @@ export function MobileSubscriptionPlans({ onBack, onNavigate }: MobileSubscripti
       toast.error(t('subscription.error.selectFormula'));
       return;
     }
-
     const currentBalance = walletData?.balance || 0;
-
     if (currentBalance < selectedFormula.price) {
       haptics.error();
       Alert.alert(
@@ -116,29 +115,18 @@ export function MobileSubscriptionPlans({ onBack, onNavigate }: MobileSubscripti
       );
       return;
     }
-
     try {
       setIsSubmitting(true);
-      
-      await subscriptionService.subscribe({
-        formulaId: selectedFormula.id,
-        startDate: new Date()
-      });
-
+      await subscriptionService.subscribe({ formulaId: selectedFormula.id, startDate: new Date() });
       haptics.success();
       toast.success(t('subscription.success.title'));
-      
       await loadCurrentSubscription();
       await loadWalletData();
-      
       Alert.alert(
         t('subscription.success.title'),
         `${t('subscription.success.message')} ${selectedPackage?.name} - ${selectedFormula.name}`,
-        [
-          { text: t('subscription.success.ok'), onPress: () => onBack() }
-        ]
+        [{ text: t('subscription.success.ok'), onPress: () => onBack() }]
       );
-      
     } catch (error: any) {
       haptics.error();
       toast.error(error.message || t('subscription.error.subscribing'));
@@ -149,17 +137,13 @@ export function MobileSubscriptionPlans({ onBack, onNavigate }: MobileSubscripti
 
   const handleCancelSubscription = async () => {
     if (!currentSubscription) return;
-
     Alert.alert(
       t('subscription.cancel.title'),
       t('subscription.cancel.confirm'),
       [
-        { 
-          text: t('subscription.cancel.no'), 
-          style: 'cancel' 
-        },
-        { 
-          text: t('subscription.cancel.yes'), 
+        { text: t('subscription.cancel.no'), style: 'cancel' },
+        {
+          text: t('subscription.cancel.yes'),
           style: 'destructive',
           onPress: async () => {
             try {
@@ -180,7 +164,6 @@ export function MobileSubscriptionPlans({ onBack, onNavigate }: MobileSubscripti
 
   const handleChangeSubscription = async (newFormulaId: string) => {
     if (!currentSubscription) return;
-
     try {
       setIsSubmitting(true);
       await subscriptionService.changeSubscription(currentSubscription.id, newFormulaId);
@@ -197,127 +180,122 @@ export function MobileSubscriptionPlans({ onBack, onNavigate }: MobileSubscripti
     }
   };
 
+  const hasTimeWindow = (formula: SubscriptionFormula) =>
+    formula.dayStartHour != null && formula.dayEndHour != null;
+
+  const isDurationFormula = (formula: SubscriptionFormula) =>
+    (formula as any).formulaType === 'DURATION';
+
+  const textColor = isDark ? '#f9fafb' : '#111827';
+  const subColor = isDark ? '#9ca3af' : '#6b7280';
+  const cardBg = isDark ? '#1f2937' : 'white';
+  const borderColor = isDark ? '#374151' : '#e5e7eb';
+
   return (
     <View style={styles.container}>
-      {/* Header */}
-      <View 
-        style={[
-          styles.px16, 
-          styles.py16, 
-          styles.row, 
-          styles.alignCenter,
-          styles.gap16,
-          { 
-            backgroundColor: colorScheme === 'light' ? 'white' : '#1f2937',
-            borderBottomWidth: 1,
-            borderBottomColor: colorScheme === 'light' ? '#e5e7eb' : '#374151'
-          }
-        ]}
-      >
-        <TouchableOpacity
-          onPress={() => {
-            haptics.light();
-            onBack();
-          }}
-          style={[styles.p8, styles.rounded8]}
-        >
-          <ArrowLeft size={20} color={colorScheme === 'light' ? '#111827' : '#f9fafb'} />
-        </TouchableOpacity>
-        <Text variant="subtitle" color="#16a34a">
-          {t('subscription.plans.title')}
-        </Text>
-      </View>
+      <MobileHeader title={t('subscription.plans.title')} showBack onBack={onBack} />
 
-      <ScrollView 
+      <ScrollView
         style={styles.scrollView}
-        contentContainerStyle={[styles.p16, styles.gap16]}
+        contentContainerStyle={[styles.p16, { gap: 16 }]}
         showsVerticalScrollIndicator={false}
       >
-        
-        {/* Current Subscription Display */}
-        {currentSubscription && (
-          <Card style={[styles.p16, { backgroundColor: '#dbeafe', borderColor: '#0284c7' }]}>
-            <View style={[styles.row, styles.spaceBetween, styles.alignCenter, styles.mb8]}>
-              <Text variant="body" color="#0c4a6e" weight="bold">
-                {t('subscription.current.active')}
-              </Text>
-              <Star size={20} color="#0284c7" fill="#0284c7" />
-            </View>
-            
-            <Text size="sm" color="#0c4a6e" style={styles.mb8}>
-              <Text weight="bold">{currentSubscription.packageName}</Text>
-              {' - '}
-              <Text weight="bold">{currentSubscription.formulaName}</Text>
+        {/* Wallet balance chip */}
+        {walletData && (
+          <View style={[styles.row, styles.alignCenter, styles.gap8, {
+            alignSelf: 'flex-end',
+            backgroundColor: isDark ? '#374151' : '#f3f4f6',
+            borderRadius: 20,
+            paddingHorizontal: 12,
+            paddingVertical: 6
+          }]}>
+            <Wallet size={14} color={isDark ? '#9ca3af' : '#6b7280'} />
+            <Text size="sm" color={subColor}>
+              {(walletData.balance || 0).toLocaleString('fr-FR')} FCFA
             </Text>
-
-            <View style={[styles.column, styles.gap8, styles.mb12]}>
-              <View style={[styles.row, styles.spaceBetween]}>
-                <Text size="xs" color="#0c4a6e">{t('subscription.current.daysRemaining')}</Text>
-                <Text size="xs" color="#0c4a6e" weight="bold">{currentSubscription.remainingDays}</Text>
-              </View>
-              <View style={[styles.row, styles.spaceBetween]}>
-                <Text size="xs" color="#0c4a6e">{t('subscription.current.expiresAt')}</Text>
-                <Text size="xs" color="#0c4a6e">{new Date(currentSubscription.endDate).toLocaleDateString('fr-FR')}</Text>
-              </View>
-              <View style={[styles.row, styles.spaceBetween]}>
-                <Text size="xs" color="#0c4a6e">{t('subscription.current.hours')}</Text>
-                <Text size="xs" color="#0c4a6e">{currentSubscription.dayStartHour}h - {currentSubscription.dayEndHour}h</Text>
-              </View>
-            </View>
-
-            <View style={[styles.row, styles.gap8]}>
-              <Button 
-                onPress={() => setIsChangeModalOpen(true)}
-                style={{ 
-                  flex: 1,
-                  backgroundColor: '#0284c7'
-                }}
-              >
-                <Text color="white">{t('subscription.change.title')}</Text>
-              </Button>
-              <Button 
-                onPress={handleCancelSubscription}
-                style={{ 
-                  flex: 1,
-                  backgroundColor: '#dc2626'
-                }}
-              >
-                <Text color="white">{t('subscription.cancel.title')}</Text>
-              </Button>
-            </View>
-          </Card>
+          </View>
         )}
 
-        {/* Free Plans Section */}
+        {/* Current Subscription */}
+        {currentSubscription && (() => {
+          const totalDays = currentSubscription.totalDays || currentSubscription.remainingDays;
+          const progressPercent = totalDays > 0 ? Math.min((currentSubscription.remainingDays / totalDays) * 100, 100) : 0;
+          return (
+            <Card style={[styles.p16, { backgroundColor: '#dbeafe', borderColor: '#0284c7', borderWidth: 1 }]}>
+              <View style={[styles.row, styles.spaceBetween, styles.alignCenter, styles.mb8]}>
+                <Text variant="body" color="#0c4a6e" weight="bold">
+                  {t('subscription.current.active')}
+                </Text>
+                <Star size={18} color="#0284c7" fill="#0284c7" />
+              </View>
+
+              <Text size="sm" color="#0c4a6e" style={styles.mb12}>
+                <Text weight="bold">{currentSubscription.packageName}</Text>
+                {' — '}
+                <Text weight="bold">{currentSubscription.formulaName}</Text>
+              </Text>
+
+              {/* Progress bar */}
+              <View style={{ marginBottom: 12 }}>
+                <View style={[styles.row, styles.spaceBetween, styles.mb4]}>
+                  <Text size="xs" color="#0c4a6e">{t('subscription.current.daysRemaining')}</Text>
+                  <Text size="xs" color="#0c4a6e" weight="bold">{currentSubscription.remainingDays} j</Text>
+                </View>
+                <View style={{ height: 6, backgroundColor: '#bfdbfe', borderRadius: 3 }}>
+                  <View style={{ height: 6, width: `${progressPercent}%`, backgroundColor: '#0284c7', borderRadius: 3 }} />
+                </View>
+              </View>
+
+              <View style={[styles.column, styles.gap4, styles.mb12]}>
+                <View style={[styles.row, styles.spaceBetween]}>
+                  <Text size="xs" color="#0c4a6e">{t('subscription.current.expiresAt')}</Text>
+                  <Text size="xs" color="#0c4a6e">{new Date(currentSubscription.endDate).toLocaleDateString('fr-FR')}</Text>
+                </View>
+                {currentSubscription.dayStartHour != null && currentSubscription.dayEndHour != null && (
+                  <View style={[styles.row, styles.spaceBetween]}>
+                    <Text size="xs" color="#0c4a6e">{t('subscription.current.hours')}</Text>
+                    <Text size="xs" color="#0c4a6e">{currentSubscription.dayStartHour}h - {currentSubscription.dayEndHour}h</Text>
+                  </View>
+                )}
+              </View>
+
+              <View style={[styles.row, styles.gap8]}>
+                <Button onPress={() => setIsChangeModalOpen(true)} style={{ flex: 1, backgroundColor: '#0284c7' }}>
+                  <Text color="white">{t('subscription.change.title')}</Text>
+                </Button>
+                <Button onPress={handleCancelSubscription} style={{ flex: 1, backgroundColor: '#dc2626' }}>
+                  <Text color="white">{t('subscription.cancel.title')}</Text>
+                </Button>
+              </View>
+            </Card>
+          );
+        })()}
+
+        {/* Free Plans */}
         {freePlans.length > 0 && (
-          <View style={styles.gap8}>
-            <Text variant="body" color={colorScheme === 'light' ? '#111827' : '#f9fafb'} weight="bold">
+          <View style={{ gap: 8 }}>
+            <Text variant="body" color={textColor} weight="bold">
               {t('subscription.freePlans.title')}
             </Text>
             {freePlans.map((plan) => {
-              // Un plan est activé seulement si startDate n'est PAS la sentinelle (année 2099+)
               const isActivated = new Date(plan.startDate).getFullYear() < 2099;
               return (
                 <Card
                   key={plan.id}
                   style={[styles.p16, {
-                    backgroundColor: isActivated
-                      ? (colorScheme === 'light' ? '#f0fdf4' : '#14532d')
-                      : (colorScheme === 'light' ? '#f9fafb' : '#1f2937'),
-                    borderColor: isActivated ? '#16a34a' : (colorScheme === 'light' ? '#d1d5db' : '#4b5563'),
-                    borderWidth: 1,
+                    backgroundColor: isActivated ? (isDark ? '#14532d' : '#f0fdf4') : cardBg,
+                    borderColor: isActivated ? '#16a34a' : borderColor,
+                    borderWidth: 1
                   }]}
                 >
                   <View style={[styles.row, styles.spaceBetween, styles.alignCenter, styles.mb8]}>
-                    <Text variant="body" color={colorScheme === 'light' ? '#111827' : '#f9fafb'} weight="bold">
-                      {plan.rule.name}
-                    </Text>
+                    <Text variant="body" color={textColor} weight="bold">{plan.rule.name}</Text>
                     <View style={[styles.row, styles.gap4, styles.alignCenter]}>
-                      <View style={[styles.px8, styles.py4, { borderRadius: 999, backgroundColor: '#16a34a' }]}>
+                      <View style={[{ borderRadius: 999, backgroundColor: '#16a34a', paddingHorizontal: 8, paddingVertical: 4 }]}>
                         <Text size="xs" color="white" weight="bold">{t('subscription.freePlans.free')}</Text>
                       </View>
                       {isActivated && (
-                        <View style={[styles.px8, styles.py4, { borderRadius: 999, backgroundColor: '#0ea5e9' }]}>
+                        <View style={[{ borderRadius: 999, backgroundColor: '#0ea5e9', paddingHorizontal: 8, paddingVertical: 4 }]}>
                           <Text size="xs" color="white" weight="bold">{t('subscription.freePlans.active')}</Text>
                         </View>
                       )}
@@ -325,31 +303,23 @@ export function MobileSubscriptionPlans({ onBack, onNavigate }: MobileSubscripti
                   </View>
                   <View style={[styles.column, styles.gap4]}>
                     <View style={[styles.row, styles.spaceBetween]}>
-                      <Text size="xs" color={colorScheme === 'light' ? '#6b7280' : '#9ca3af'}>{t('subscription.freePlans.daysRemaining')}</Text>
-                      <Text size="xs" color={colorScheme === 'light' ? '#111827' : '#f9fafb'} weight="bold">
-                        {plan.daysRemaining} / {plan.daysGranted}
-                      </Text>
+                      <Text size="xs" color={subColor}>{t('subscription.freePlans.daysRemaining')}</Text>
+                      <Text size="xs" color={textColor} weight="bold">{plan.daysRemaining} / {plan.daysGranted}</Text>
                     </View>
                     <View style={[styles.row, styles.spaceBetween]}>
-                      <Text size="xs" color={colorScheme === 'light' ? '#6b7280' : '#9ca3af'}>{t('subscription.freePlans.expiresAt')}</Text>
-                      <Text size="xs" color={colorScheme === 'light' ? '#111827' : '#f9fafb'}>
-                        {new Date(plan.expiresAt).toLocaleDateString('fr-FR')}
-                      </Text>
+                      <Text size="xs" color={subColor}>{t('subscription.freePlans.expiresAt')}</Text>
+                      <Text size="xs" color={textColor}>{new Date(plan.expiresAt).toLocaleDateString('fr-FR')}</Text>
                     </View>
-                    {(plan.rule.startHour != null && plan.rule.endHour != null) && (
+                    {plan.rule.startHour != null && plan.rule.endHour != null && (
                       <View style={[styles.row, styles.spaceBetween]}>
-                        <Text size="xs" color={colorScheme === 'light' ? '#6b7280' : '#9ca3af'}>{t('subscription.freePlans.timeRange')}</Text>
-                        <Text size="xs" color={colorScheme === 'light' ? '#111827' : '#f9fafb'}>
-                          {plan.rule.startHour}h – {plan.rule.endHour}h
-                        </Text>
+                        <Text size="xs" color={subColor}>{t('subscription.freePlans.timeRange')}</Text>
+                        <Text size="xs" color={textColor}>{plan.rule.startHour}h – {plan.rule.endHour}h</Text>
                       </View>
                     )}
                     {plan.rule.validUntil && (
                       <View style={[styles.row, styles.spaceBetween]}>
                         <Text size="xs" color="#dc2626">{t('subscription.freePlans.validUntil')}</Text>
-                        <Text size="xs" color="#dc2626" weight="bold">
-                          {new Date(plan.rule.validUntil).toLocaleDateString('fr-FR')}
-                        </Text>
+                        <Text size="xs" color="#dc2626" weight="bold">{new Date(plan.rule.validUntil).toLocaleDateString('fr-FR')}</Text>
                       </View>
                     )}
                     {!isActivated && (
@@ -385,15 +355,14 @@ export function MobileSubscriptionPlans({ onBack, onNavigate }: MobileSubscripti
           </View>
         )}
 
-        {/* No Subscription - Show options to subscribe */}
+        {/* Subscribe section (no active subscription) */}
         {!currentSubscription && (
           <>
-            {/* Packages Selection */}
-            <View style={styles.gap16}>
-              <Text variant="body" color={colorScheme === 'light' ? '#111827' : '#f9fafb'}>
+            {/* Package selection */}
+            <View style={{ gap: 12 }}>
+              <Text variant="body" color={textColor} weight="bold">
                 {t('subscription.plans.selectPackage')}
               </Text>
-              
               {packages.map((pkg) => (
                 <TouchableOpacity
                   key={pkg.id}
@@ -404,161 +373,154 @@ export function MobileSubscriptionPlans({ onBack, onNavigate }: MobileSubscripti
                     haptics.light();
                   }}
                   style={[
-                    styles.card,
-                    styles.p16,
+                    styles.card, styles.p16,
                     {
                       borderWidth: selectedPackageId === pkg.id ? 2 : 1,
-                      borderColor: selectedPackageId === pkg.id ? '#16a34a' : (colorScheme === 'light' ? '#e5e7eb' : '#4b5563'),
-                      backgroundColor: selectedPackageId === pkg.id ? '#f0fdf4' : (colorScheme === 'light' ? 'white' : '#1f2937')
+                      borderColor: selectedPackageId === pkg.id ? '#16a34a' : borderColor,
+                      backgroundColor: selectedPackageId === pkg.id ? (isDark ? '#14532d' : '#f0fdf4') : cardBg
                     }
                   ]}
                 >
-                  <Text 
-                    variant="body" 
-                    color={selectedPackageId === pkg.id ? '#16a34a' : (colorScheme === 'light' ? '#111827' : '#f9fafb')}
+                  <Text
+                    variant="body"
+                    color={selectedPackageId === pkg.id ? '#16a34a' : textColor}
                     weight="bold"
                   >
                     {pkg.name}
                   </Text>
                   {pkg.description && (
-                    <Text size="sm" color={colorScheme === 'light' ? '#6b7280' : '#9ca3af'} style={styles.mt4}>
-                      {pkg.description}
-                    </Text>
+                    <Text size="sm" color={subColor} style={styles.mt4}>{pkg.description}</Text>
                   )}
                 </TouchableOpacity>
               ))}
             </View>
 
-            {/* Formulas Selection */}
+            {/* Formula selection */}
             {formulas.length > 0 && (
-              <View style={styles.gap16}>
-                <Text variant="body" color={colorScheme === 'light' ? '#111827' : '#f9fafb'}>
+              <View style={{ gap: 12 }}>
+                <Text variant="body" color={textColor} weight="bold">
                   {t('subscription.plans.selectFormula')}
                 </Text>
-                
-                {formulas.map((formula) => (
-                  <TouchableOpacity
-                    key={formula.id}
-                    onPress={() => {
-                      setSelectedFormula(formula);
-                      haptics.light();
-                    }}
-                    style={[
-                      styles.card,
-                      styles.p16,
-                      {
-                        borderWidth: selectedFormula?.id === formula.id ? 2 : 1,
-                        borderColor: selectedFormula?.id === formula.id ? '#16a34a' : (colorScheme === 'light' ? '#e5e7eb' : '#4b5563'),
-                        backgroundColor: selectedFormula?.id === formula.id ? '#f0fdf4' : (colorScheme === 'light' ? 'white' : '#1f2937')
-                      }
-                    ]}
-                  >
-                    <View style={[styles.row, styles.spaceBetween, styles.alignCenter, styles.mb8]}>
-                      <View style={styles.flex1}>
-                        <Text 
-                          variant="body" 
-                          color={selectedFormula?.id === formula.id ? '#16a34a' : (colorScheme === 'light' ? '#111827' : '#f9fafb')}
-                          weight="bold"
-                        >
-                          {formula.name}
-                        </Text>
-                        {formula.description && (
-                          <Text size="sm" color={colorScheme === 'light' ? '#6b7280' : '#9ca3af'}>
-                            {formula.description}
+                {formulas.map((formula) => {
+                  const isSelected = selectedFormula?.id === formula.id;
+                  const hasTW = hasTimeWindow(formula);
+                  const isDuration = isDurationFormula(formula);
+                  return (
+                    <TouchableOpacity
+                      key={formula.id}
+                      onPress={() => { setSelectedFormula(formula); haptics.light(); }}
+                      style={[
+                        styles.card, styles.p16,
+                        {
+                          borderWidth: isSelected ? 2 : 1,
+                          borderColor: isSelected ? '#16a34a' : borderColor,
+                          backgroundColor: isSelected ? (isDark ? '#14532d' : '#f0fdf4') : cardBg
+                        }
+                      ]}
+                    >
+                      <View style={[styles.row, styles.spaceBetween, styles.alignCenter, styles.mb8]}>
+                        <View style={styles.flex1}>
+                          <View style={[styles.row, styles.alignCenter, styles.gap8]}>
+                            <Text variant="body" color={isSelected ? '#16a34a' : textColor} weight="bold">
+                              {formula.name}
+                            </Text>
+                            {isDuration ? (
+                              <View style={{ backgroundColor: isDark ? '#4c1d95' : '#ede9fe', borderRadius: 4, paddingHorizontal: 6, paddingVertical: 2 }}>
+                                <Text size="xs" color={isDark ? '#c4b5fd' : '#7c3aed'}>Durée</Text>
+                              </View>
+                            ) : (
+                              <View style={{ backgroundColor: isDark ? '#1e3a5f' : '#dbeafe', borderRadius: 4, paddingHorizontal: 6, paddingVertical: 2 }}>
+                                <Text size="xs" color={isDark ? '#93c5fd' : '#1d4ed8'}>Plage horaire</Text>
+                              </View>
+                            )}
+                          </View>
+                          {formula.description && (
+                            <Text size="sm" color={subColor}>{formula.description}</Text>
+                          )}
+                        </View>
+                        <View style={styles.alignEnd}>
+                          <Text variant="body" color="#16a34a" weight="bold">
+                            {formula.price.toLocaleString('fr-FR')}
                           </Text>
-                        )}
+                          <Text size="xs" color={subColor}>{t('subscription.currency')}</Text>
+                        </View>
                       </View>
-                      <View style={styles.alignEnd}>
-                        <Text variant="body" color="#16a34a" weight="bold">
-                          {formula.price.toLocaleString('fr-FR')}
-                        </Text>
-                        <Text size="xs" color={colorScheme === 'light' ? '#6b7280' : '#9ca3af'}>
-                          {t('subscription.currency')}
-                        </Text>
-                      </View>
-                    </View>
 
-                    {/* Formula Details */}
-                    <View style={[styles.column, styles.gap4, { borderTopWidth: 1, borderTopColor: colorScheme === 'light' ? '#e5e7eb' : '#4b5563', paddingTop: 8 }]}>
-                      <View style={[styles.row, styles.spaceBetween]}>
-                        <Text size="xs" color={colorScheme === 'light' ? '#6b7280' : '#9ca3af'}>
-                          {t('subscription.duration')}
-                        </Text>
-                        <Text size="xs" color={colorScheme === 'light' ? '#111827' : '#f9fafb'} weight="bold">
-                          {formula.numberOfDays} {formula.numberOfDays === 1 ? 'jour' : 'jours'}
-                        </Text>
-                      </View>
-                      <View style={[styles.row, styles.spaceBetween]}>
-                        <Text size="xs" color={colorScheme === 'light' ? '#6b7280' : '#9ca3af'}>
-                          {t('subscription.hours')}
-                        </Text>
-                        <Text size="xs" color={colorScheme === 'light' ? '#111827' : '#f9fafb'} weight="bold">
-                          {formula.dayStartHour}h - {formula.dayEndHour}h
-                        </Text>
-                      </View>
-                      {formula.chargeAfterHours && formula.afterHoursPrice && (
+                      <View style={[styles.column, styles.gap4, { borderTopWidth: 1, borderTopColor: borderColor, paddingTop: 8 }]}>
                         <View style={[styles.row, styles.spaceBetween]}>
-                          <Text size="xs" color="#dc2626">
-                            {t('subscription.afterHours')}
-                          </Text>
-                          <Text size="xs" color="#dc2626" weight="bold">
-                            {formula.afterHoursPrice.toLocaleString('fr-FR')} {t('subscription.currency')}
+                          <Text size="xs" color={subColor}>{t('subscription.duration')}</Text>
+                          <Text size="xs" color={textColor} weight="bold">
+                            {formula.numberOfDays} {formula.numberOfDays === 1 ? 'jour' : 'jours'}
                           </Text>
                         </View>
-                      )}
-                    </View>
-                  </TouchableOpacity>
-                ))}
+                        {isDuration && (formula as any).maxRideDurationHours != null && (
+                          <View style={[styles.row, styles.spaceBetween]}>
+                            <Text size="xs" color={subColor}>Durée de trajet</Text>
+                            <Text size="xs" color={textColor} weight="bold">{(formula as any).maxRideDurationHours}h</Text>
+                          </View>
+                        )}
+                        {!isDuration && hasTW && (
+                          <View style={[styles.row, styles.spaceBetween]}>
+                            <Text size="xs" color={subColor}>{t('subscription.hours')}</Text>
+                            <Text size="xs" color={textColor} weight="bold">
+                              {formula.dayStartHour}h – {formula.dayEndHour}h
+                            </Text>
+                          </View>
+                        )}
+                        {formula.chargeAfterHours && formula.afterHoursPrice && (
+                          <View style={[styles.row, styles.spaceBetween]}>
+                            <Text size="xs" color="#dc2626">{t('subscription.afterHours')}</Text>
+                            <Text size="xs" color="#dc2626" weight="bold">
+                              {formula.afterHoursPrice.toLocaleString('fr-FR')} {t('subscription.currency')}
+                            </Text>
+                          </View>
+                        )}
+                      </View>
+                    </TouchableOpacity>
+                  );
+                })}
               </View>
             )}
 
-            {/* Summary and Subscribe */}
+            {/* Summary + Subscribe */}
             {selectedFormula && selectedPackage && (
               <>
-                <Card style={[styles.p16, { backgroundColor: '#f0fdf4', borderColor: '#16a34a' }]}>
-                  <Text variant="body" color="#111827" style={styles.mb12}>
+                <Card style={[styles.p16, { backgroundColor: isDark ? '#14532d' : '#f0fdf4', borderColor: '#16a34a', borderWidth: 1 }]}>
+                  <Text variant="body" color={textColor} style={styles.mb12}>
                     {t('subscription.summary.title')}
                   </Text>
-                  
                   <View style={[styles.row, styles.spaceBetween, styles.mb4]}>
-                    <Text size="sm" color="#6b7280">{t('subscription.summary.package')}</Text>
-                    <Text size="sm" color="#111827">{selectedPackage.name}</Text>
+                    <Text size="sm" color={subColor}>{t('subscription.summary.package')}</Text>
+                    <Text size="sm" color={textColor}>{selectedPackage.name}</Text>
                   </View>
-                  
                   <View style={[styles.row, styles.spaceBetween, styles.mb4]}>
-                    <Text size="sm" color="#6b7280">{t('subscription.summary.formula')}</Text>
-                    <Text size="sm" color="#111827">{selectedFormula.name}</Text>
+                    <Text size="sm" color={subColor}>{t('subscription.summary.formula')}</Text>
+                    <Text size="sm" color={textColor}>{selectedFormula.name}</Text>
                   </View>
-                  
                   <View style={[styles.row, styles.spaceBetween, styles.mb4]}>
-                    <Text size="sm" color="#6b7280">{t('subscription.summary.currentBalance')}</Text>
-                    <Text size="sm" color="#111827">{(walletData?.balance || 0).toLocaleString('fr-FR')} {t('subscription.currency')}</Text>
+                    <Text size="sm" color={subColor}>{t('subscription.summary.currentBalance')}</Text>
+                    <Text size="sm" color={(walletData?.balance || 0) >= selectedFormula.price ? '#16a34a' : '#dc2626'} weight="bold">
+                      {(walletData?.balance || 0).toLocaleString('fr-FR')} FCFA
+                    </Text>
                   </View>
-                  
-                  <View style={[styles.row, styles.spaceBetween, { paddingTop: 8, borderTopWidth: 1, borderTopColor: '#d1fae5' }]}>
-                    <Text variant="body" color="#111827">{t('subscription.summary.totalPrice')}</Text>
+                  <View style={[styles.row, styles.spaceBetween, { paddingTop: 8, borderTopWidth: 1, borderTopColor: isDark ? '#166534' : '#d1fae5' }]}>
+                    <Text variant="body" color={textColor}>{t('subscription.summary.totalPrice')}</Text>
                     <Text variant="body" color="#16a34a" weight="bold">
-                      {selectedFormula.price.toLocaleString('fr-FR')} {t('subscription.currency')}
+                      {selectedFormula.price.toLocaleString('fr-FR')} FCFA
                     </Text>
                   </View>
                 </Card>
 
-                <Button 
+                <Button
                   onPress={handleSubscribe}
                   disabled={isSubmitting}
                   fullWidth
-                  style={{ 
-                    backgroundColor: '#16a34a',
-                    opacity: isSubmitting ? 0.6 : 1
-                  }}
+                  style={{ backgroundColor: '#16a34a', opacity: isSubmitting ? 0.6 : 1 }}
                 >
-                  <View style={[styles.row, styles.alignCenter, styles.gap4]}>
+                  <View style={[styles.row, styles.alignCenter, styles.gap8]}>
                     <CreditCard size={16} color="white" />
                     <Text color="white">
-                      {isSubmitting 
-                        ? t('subscription.subscribing') 
-                        : t('subscription.subscribe')
-                      }
+                      {isSubmitting ? t('subscription.subscribing') : t('subscription.subscribe')}
                     </Text>
                   </View>
                 </Button>
@@ -576,23 +538,29 @@ export function MobileSubscriptionPlans({ onBack, onNavigate }: MobileSubscripti
         onRequestClose={() => setIsChangeModalOpen(false)}
       >
         <View style={{ flex: 1, backgroundColor: 'rgba(0,0,0,0.5)' }}>
-          <View style={[styles.flex1, { marginTop: 50, backgroundColor: colorScheme === 'light' ? 'white' : '#111827', borderTopLeftRadius: 20, borderTopRightRadius: 20 }]}>
-            {/* Modal Header */}
-            <View style={[styles.px16, styles.py16, styles.row, styles.spaceBetween, styles.alignCenter, { borderBottomWidth: 1, borderBottomColor: colorScheme === 'light' ? '#e5e7eb' : '#374151' }]}>
-              <Text variant="body" color={colorScheme === 'light' ? '#111827' : '#f9fafb'} weight="bold">
+          <View style={[{ marginTop: 60, flex: 1, backgroundColor: isDark ? '#111827' : 'white', borderTopLeftRadius: 20, borderTopRightRadius: 20 }]}>
+            <View style={[styles.px16, styles.py16, styles.row, styles.spaceBetween, styles.alignCenter, { borderBottomWidth: 1, borderBottomColor: borderColor }]}>
+              <Text variant="body" color={textColor} weight="bold">
                 {t('subscription.change.selectNew')}
               </Text>
               <TouchableOpacity onPress={() => setIsChangeModalOpen(false)}>
-                <X size={24} color={colorScheme === 'light' ? '#111827' : '#f9fafb'} />
+                <X size={22} color={textColor} />
               </TouchableOpacity>
             </View>
 
-            <ScrollView style={[styles.flex1, styles.p16]} contentContainerStyle={styles.gap12}>
+            {/* Wallet balance in modal */}
+            {walletData && (
+              <View style={[styles.row, styles.alignCenter, styles.gap8, styles.px16, { paddingVertical: 10, borderBottomWidth: 1, borderBottomColor: borderColor }]}>
+                <Wallet size={14} color={subColor} />
+                <Text size="sm" color={subColor}>Solde : </Text>
+                <Text size="sm" color={textColor} weight="bold">{(walletData.balance || 0).toLocaleString('fr-FR')} FCFA</Text>
+              </View>
+            )}
+
+            <ScrollView style={[{ flex: 1, padding: 16 }]} contentContainerStyle={{ gap: 12 }}>
               {packages.map(pkg => (
                 <View key={pkg.id}>
-                  <Text variant="body" color="#16a34a" weight="bold" style={styles.mb8}>
-                    {pkg.name}
-                  </Text>
+                  <Text variant="body" color="#16a34a" weight="bold" style={styles.mb8}>{pkg.name}</Text>
                   {pkg.formulas.map(formula => (
                     <TouchableOpacity
                       key={formula.id}
@@ -602,14 +570,12 @@ export function MobileSubscriptionPlans({ onBack, onNavigate }: MobileSubscripti
                     >
                       <View style={[styles.row, styles.spaceBetween, styles.alignCenter]}>
                         <View style={styles.flex1}>
-                          <Text size="sm" color={colorScheme === 'light' ? '#111827' : '#f9fafb'} weight="bold">
-                            {formula.name}
-                          </Text>
-                          <Text size="xs" color={colorScheme === 'light' ? '#6b7280' : '#9ca3af'}>
-                            {formula.numberOfDays} jours - {formula.price.toLocaleString('fr-FR')}
+                          <Text size="sm" color={textColor} weight="bold">{formula.name}</Text>
+                          <Text size="xs" color={subColor}>
+                            {formula.numberOfDays} j — {formula.price.toLocaleString('fr-FR')} FCFA
                           </Text>
                         </View>
-                        <Check size={20} color="#16a34a" />
+                        <Check size={18} color="#16a34a" />
                       </View>
                     </TouchableOpacity>
                   ))}

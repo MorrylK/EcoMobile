@@ -16,19 +16,24 @@ export interface CreateSubscriptionFormulaDTO {
   packageId: string;
   name: string;
   description?: string;
+  formulaType?: string; // 'TIME_WINDOW' | 'DURATION'
   numberOfDays: number;
   price: number;
+  // TIME_WINDOW fields
   dayStartHour?: number;
   dayEndHour?: number;
   chargeAfterHours?: boolean;
   afterHoursPrice?: number;
   afterHoursType?: string;
+  // DURATION fields
+  maxRideDurationHours?: number;
   isActive?: boolean;
 }
 
 export interface UpdateSubscriptionFormulaDTO {
   name?: string;
   description?: string;
+  formulaType?: string;
   numberOfDays?: number;
   price?: number;
   dayStartHour?: number;
@@ -36,6 +41,7 @@ export interface UpdateSubscriptionFormulaDTO {
   chargeAfterHours?: boolean;
   afterHoursPrice?: number;
   afterHoursType?: string;
+  maxRideDurationHours?: number;
   isActive?: boolean;
 }
 
@@ -90,6 +96,7 @@ class SubscriptionPackageRepository {
         packageId: data.packageId,
         name: data.name,
         description: data.description,
+        formulaType: data.formulaType ?? 'TIME_WINDOW',
         numberOfDays: data.numberOfDays,
         price: data.price,
         dayStartHour: data.dayStartHour ?? 0,
@@ -97,8 +104,9 @@ class SubscriptionPackageRepository {
         chargeAfterHours: data.chargeAfterHours ?? false,
         afterHoursPrice: data.afterHoursPrice,
         afterHoursType: data.afterHoursType ?? 'FIXED_PRICE',
+        maxRideDurationHours: data.maxRideDurationHours ?? null,
         isActive: data.isActive ?? true
-      }
+      } as any
     });
   }
 

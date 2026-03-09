@@ -366,6 +366,21 @@ CREATE TABLE `pricing_rules` (
 ) DEFAULT CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci;
 
 -- CreateTable
+CREATE TABLE `pricing_tiers` (
+    `id` VARCHAR(191) NOT NULL,
+    `name` VARCHAR(191) NULL,
+    `durationMinutes` INTEGER NOT NULL,
+    `price` DOUBLE NOT NULL,
+    `dayStartHour` INTEGER NULL,
+    `dayEndHour` INTEGER NULL,
+    `isActive` BOOLEAN NOT NULL DEFAULT true,
+    `createdAt` DATETIME(3) NOT NULL DEFAULT CURRENT_TIMESTAMP(3),
+    `updatedAt` DATETIME(3) NOT NULL,
+
+    PRIMARY KEY (`id`)
+) DEFAULT CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci;
+
+-- CreateTable
 CREATE TABLE `promotions` (
     `id` VARCHAR(191) NOT NULL,
     `pricingConfigId` VARCHAR(191) NOT NULL,
@@ -492,13 +507,15 @@ CREATE TABLE `subscription_formulas` (
     `packageId` VARCHAR(191) NOT NULL,
     `name` VARCHAR(191) NOT NULL,
     `description` VARCHAR(191) NULL,
-    `numberOfDays` INTEGER NOT NULL,
-    `price` DOUBLE NOT NULL,
-    `dayStartHour` INTEGER NOT NULL DEFAULT 0,
-    `dayEndHour` INTEGER NOT NULL DEFAULT 23,
+    `formulaType` VARCHAR(191) NOT NULL DEFAULT 'TIME_WINDOW',
+    `numberOfDays` INTEGER NOT NULL DEFAULT 1,
+    `dayStartHour` INTEGER NULL,
+    `dayEndHour` INTEGER NULL,
     `chargeAfterHours` BOOLEAN NOT NULL DEFAULT false,
     `afterHoursPrice` DOUBLE NULL,
     `afterHoursType` VARCHAR(191) NULL DEFAULT 'FIXED_PRICE',
+    `maxRideDurationHours` DOUBLE NULL,
+    `price` DOUBLE NOT NULL,
     `isActive` BOOLEAN NOT NULL DEFAULT true,
     `createdAt` DATETIME(3) NOT NULL DEFAULT CURRENT_TIMESTAMP(3),
     `updatedAt` DATETIME(3) NOT NULL,
@@ -592,6 +609,7 @@ CREATE TABLE `subscriptions` (
     `endDate` DATETIME(3) NOT NULL,
     `dayResetTime` DATETIME(3) NULL,
     `currentDay` INTEGER NOT NULL DEFAULT 1,
+    `usedRideMinutes` INTEGER NOT NULL DEFAULT 0,
     `createdAt` DATETIME(3) NOT NULL DEFAULT CURRENT_TIMESTAMP(3),
     `updatedAt` DATETIME(3) NOT NULL,
 

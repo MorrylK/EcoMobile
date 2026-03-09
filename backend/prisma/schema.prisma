@@ -431,9 +431,9 @@ model PricingRule {
   id              String        @id @default(uuid())
   pricingConfigId String
   name            String
-  dayOfWeek       Int?          
-  startHour       Int?          
-  endHour         Int?          
+  dayOfWeek       Int?
+  startHour       Int?
+  endHour         Int?
   multiplier      Float         @default(1)
   isActive        Boolean       @default(true)
   priority        Int           @default(0)
@@ -444,6 +444,22 @@ model PricingRule {
   pricingConfig   PricingConfig @relation(fields: [pricingConfigId], references: [id], onDelete: Cascade)
 
   @@map("pricing_rules")
+}
+
+// Paliers tarifaires pour la facturation sans forfait
+// Chaque palier définit un prix fixe pour une durée donnée, avec plage horaire optionnelle
+model PricingTier {
+  id              String   @id @default(uuid())
+  name            String?
+  durationMinutes Int      // Durée couverte par ce palier (en minutes, ex: 60=1h, 120=2h)
+  price           Float    // Prix fixe pour cette durée
+  dayStartHour    Int?     // null = s'applique à toute heure
+  dayEndHour      Int?     // null = s'applique à toute heure
+  isActive        Boolean  @default(true)
+  createdAt       DateTime @default(now())
+  updatedAt       DateTime @updatedAt
+
+  @@map("pricing_tiers")
 }
 
 model Promotion {
@@ -597,13 +613,18 @@ model SubscriptionFormula {
   packageId         String   @db.VarChar(191)
   name              String
   description       String?
-  numberOfDays      Int
-  price             Float
-  dayStartHour      Int      @default(0)
-  dayEndHour        Int      @default(23)
+  // Type de formule : TIME_WINDOW (plage horaire, N jours) | DURATION (heures totales de trajet)
+  formulaType       String   @default("TIME_WINDOW")
+  numberOfDays      Int      @default(1)
+  // Pour TIME_WINDOW : plage horaire d'accès (nullable pour DURATION sans restriction horaire)
+  dayStartHour      Int?
+  dayEndHour        Int?
   chargeAfterHours  Boolean  @default(false)
   afterHoursPrice   Float?
   afterHoursType    String?  @default("FIXED_PRICE")
+  // Pour DURATION : nombre total d'heures de trajet accordées
+  maxRideDurationHours Float?
+  price             Float
   isActive          Boolean  @default(true)
   createdAt         DateTime @default(now())
   updatedAt         DateTime @updatedAt
@@ -702,19 +723,21 @@ model PromotionPackageRelation {
 }
 
 model Subscription {
-  id            String               @id @default(uuid())
-  userId        String               @db.VarChar(191)
-  packageId     String?              @db.VarChar(191) @default("")
-  formulaId     String?              @db.VarChar(191) @default("")
-  planId        String?              @db.VarChar(191)
-  type          SubscriptionType     @default(DAILY)
-  isActive      Boolean              @default(true)
-  startDate     DateTime
-  endDate       DateTime
-  dayResetTime  DateTime?            
-  currentDay    Int                  @default(1)
-  createdAt     DateTime             @default(now())
-  updatedAt     DateTime             @updatedAt
+  id              String               @id @default(uuid())
+  userId          String               @db.VarChar(191)
+  packageId       String?              @db.VarChar(191) @default("")
+  formulaId       String?              @db.VarChar(191) @default("")
+  planId          String?              @db.VarChar(191)
+  type            SubscriptionType     @default(DAILY)
+  isActive        Boolean              @default(true)
+  startDate       DateTime
+  endDate         DateTime
+  dayResetTime    DateTime?
+  currentDay      Int                  @default(1)
+  // Pour les formules DURATION : minutes de trajet consommées
+  usedRideMinutes Int                  @default(0)
+  createdAt       DateTime             @default(now())
+  updatedAt       DateTime             @updatedAt
 
   // Relations
   user          User                 @relation(fields: [userId], references: [id], onDelete: Cascade)

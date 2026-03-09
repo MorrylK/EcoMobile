@@ -3,6 +3,7 @@ import { RideStatus, Ride } from '@prisma/client';
 import BikeService from './BikeService';
 import WalletService from './WalletService';
 import FreeDaysRuleService from './FreeDaysRuleService';
+import PricingTierService from './PricingTierService';
 import { AppError } from '../middleware/errorHandler';
 import { t } from '../locales';
 
@@ -173,11 +174,13 @@ export class RideService {
     // La règle est lue dynamiquement → un changement admin s'applique immédiatement
     if (costCalculation.paymentMethod === 'WALLET') {
       const rideEndTime = new Date();
+      const pricingConfig = await prisma.pricingConfig.findFirst({ where: { isActive: true } });
+      const fallbackHourlyRate = pricingConfig?.baseHourlyRate ?? 200;
       const freeDayResult = await FreeDaysRuleService.applyFreeDay(
         ride.userId,
         ride.startTime,
         rideEndTime,
-        costCalculation.hourlyRate,
+        fallbackHourlyRate,
       );
       if (freeDayResult.applied) {
         costCalculation.finalCost = freeDayResult.overtimeCost;
@@ -222,6 +225,24 @@ export class RideService {
             costCalculation.isOvertime,
             ride.startTime
           );
+        }
+
+        // Pour les formules DURATION : incrémenter les minutes de trajet utilisées
+        if (activeSubscription?.formulaType === 'DURATION' && activeSubscription.type === 'SUBSCRIPTION') {
+          const maxMinutes = activeSubscription.maxRideDurationHours
+            ? activeSubscription.maxRideDurationHours * 60
+            : null;
+          const used = activeSubscription.usedRideMinutes ?? 0;
+          // On ne consomme que les minutes couvertes (pas le dépassement)
+          const consumed = maxMinutes !== null
+            ? Math.min(duration, Math.max(0, maxMinutes - used))
+            : duration;
+          if (consumed > 0) {
+            await tx.subscription.update({
+              where: { id: activeSubscription.id },
+              data: { usedRideMinutes: { increment: consumed } } as any
+            });
+          }
         }
 
         // Créer une transaction avec détails
@@ -468,86 +489,130 @@ export class RideService {
     duration: number,
     startTime: Date,
     activeSubscription: any,
-    ridePlan: any
+    _ridePlan: any
   ) {
-    // Priorité : tarif configuré par l'admin (PricingConfig), fallback sur le plan du vélo, puis 200
-    const pricingConfig = await prisma.pricingConfig.findFirst({ where: { isActive: true } });
-    let hourlyRate = pricingConfig?.baseHourlyRate ?? ridePlan?.hourlyRate ?? 200;
-    // Appliquer le multiplicateur de règle tarifaire (PricingRule) selon le jour/heure du trajet
-    const rideDay = startTime.getDay();
-    const rideHour = startTime.getHours();
-    const applicableRule = await prisma.pricingRule.findFirst({
-      where: {
-        isActive: true,
-        OR: [{ dayOfWeek: null }, { dayOfWeek: rideDay }],
-        AND: [
-          { OR: [{ startHour: null }, { startHour: { lte: rideHour } }] },
-          { OR: [{ endHour: null }, { endHour: { gt: rideHour } }] }
-        ]
-      },
-      orderBy: { priority: 'desc' }
-    });
-    if (applicableRule && applicableRule.multiplier !== 1) {
-      hourlyRate = Math.round(hourlyRate * applicableRule.multiplier);
-    }
-    const durationHours = duration / 60;
-    const roundedHours = Math.ceil(durationHours);
-    const originalCost = roundedHours * hourlyRate;
+    const endTime = new Date(startTime.getTime() + duration * 60000);
+    const roundedHours = Math.ceil(duration / 60);
 
-    let finalCost = originalCost;
+    let finalCost = 0;
+    let originalCost = 0;
     let discountApplied = 0;
     let appliedRule = 'Tarif normal';
     let paymentMethod = 'WALLET';
     let isOvertime = false;
+    let breakdown: any[] = [];
 
-    if (activeSubscription) {
-      // L'utilisateur a un forfait actif
+    // ── Utilisateur sans abonnement → facturation par PricingTier ──
+    if (!activeSubscription) {
+      const calc = await PricingTierService.calculateRideCost(duration, startTime, endTime);
+      originalCost = calc.totalCost;
+      finalCost = calc.totalCost;
+      breakdown = calc.breakdown;
+      appliedRule = 'Tarification sans forfait (paliers)';
+      return { originalCost, finalCost, discountApplied, isOvertime, appliedRule, paymentMethod, hasActiveSubscription: false, roundedHours, breakdown };
+    }
+
+    // ── Abonnement DURATION ──
+    if (activeSubscription.formulaType === 'DURATION') {
+      const durationTierApplies = this.durationFormulaAppliesNow(activeSubscription, startTime);
+
+      if (!durationTierApplies) {
+        // Hors plage horaire de la formule → facturation sans forfait
+        const calc = await PricingTierService.calculateRideCost(duration, startTime, endTime);
+        originalCost = calc.totalCost;
+        finalCost = calc.totalCost;
+        breakdown = calc.breakdown;
+        isOvertime = true;
+        appliedRule = 'Forfait durée — hors plage horaire, tarification standard';
+        paymentMethod = 'SUBSCRIPTION_OVERTIME';
+        return { originalCost, finalCost, discountApplied, isOvertime, appliedRule, paymentMethod, hasActiveSubscription: true, roundedHours, breakdown };
+      }
+
+      const maxMinutes = activeSubscription.maxRideDurationHours
+        ? activeSubscription.maxRideDurationHours * 60
+        : null;
+      const usedMinutes = activeSubscription.usedRideMinutes ?? 0;
+      const remainingMinutes = maxMinutes !== null ? Math.max(0, maxMinutes - usedMinutes) : null;
+
+      // Calcul du "coût de référence" pour le détail (via PricingTier, pour l'overtime éventuel)
+      const baseCalc = await PricingTierService.calculateRideCost(duration, startTime, endTime);
+      originalCost = baseCalc.totalCost;
+
+      if (remainingMinutes !== null && remainingMinutes <= 0) {
+        // Crédit épuisé → facturation standard
+        finalCost = originalCost;
+        isOvertime = true;
+        appliedRule = 'Forfait durée épuisé — tarification standard';
+        paymentMethod = 'SUBSCRIPTION_OVERTIME';
+        breakdown = baseCalc.breakdown;
+      } else if (remainingMinutes !== null && duration > remainingMinutes) {
+        // Dépassement partiel → facturer seulement l'overtime
+        const overtimeMinutes = duration - remainingMinutes;
+        const overtimeCalc = await PricingTierService.calculateRideCost(overtimeMinutes, new Date(startTime.getTime() + remainingMinutes * 60000), endTime);
+        finalCost = overtimeCalc.totalCost;
+        discountApplied = originalCost - finalCost;
+        isOvertime = true;
+        appliedRule = `Forfait durée — dépassement de ${overtimeMinutes} min`;
+        paymentMethod = 'SUBSCRIPTION_OVERTIME';
+        breakdown = overtimeCalc.breakdown;
+      } else {
+        // Couvert entièrement
+        finalCost = 0;
+        discountApplied = originalCost;
+        appliedRule = `Inclus dans ${activeSubscription.planName} (durée)`;
+        paymentMethod = 'SUBSCRIPTION';
+        breakdown = [];
+      }
+      return { originalCost, finalCost, discountApplied, isOvertime, appliedRule, paymentMethod, hasActiveSubscription: true, roundedHours, breakdown };
+    }
+
+    // ── Abonnement TIME_WINDOW ──
+    {
+      const calc = await PricingTierService.calculateRideCost(duration, startTime, endTime);
+      originalCost = calc.totalCost;
+
       isOvertime = await this.checkIfOvertime(startTime, activeSubscription.packageType, activeSubscription.planId);
-      
+
       if (isOvertime) {
-        // Hors des heures du forfait - appliquer les règles d'override
         const overrideRule = await this.getOverrideRule(activeSubscription.planId);
-        
         if (overrideRule) {
           if (overrideRule.overTimeType === 'FIXED_PRICE') {
             finalCost = overrideRule.overTimeValue;
-            appliedRule = `Prix fixe overtime forfait: ${overrideRule.overTimeValue} XOF`;
-          } else if (overrideRule.overTimeType === 'PERCENTAGE_REDUCTION') {
+            appliedRule = `Prix fixe overtime: ${overrideRule.overTimeValue} FCFA`;
+          } else {
             const reduction = Math.round(originalCost * (overrideRule.overTimeValue / 100));
             finalCost = Math.max(0, originalCost - reduction);
             discountApplied = reduction;
-            appliedRule = `Réduction overtime forfait: ${overrideRule.overTimeValue}%`;
+            appliedRule = `Réduction overtime: ${overrideRule.overTimeValue}%`;
           }
         } else {
-          // Pas de règle d'override - réduction par défaut de 30%
-          const reduction = Math.round(originalCost * 0.3);
-          finalCost = originalCost - reduction;
-          discountApplied = reduction;
-          appliedRule = 'Réduction forfait overtime par défaut: 30%';
+          // Pas d'override → facturation standard sans forfait hors plage
+          finalCost = originalCost;
+          appliedRule = 'Hors plage horaire — tarification standard';
         }
         paymentMethod = 'SUBSCRIPTION_OVERTIME';
+        breakdown = calc.breakdown;
       } else {
-        // Dans les heures du forfait - gratuit
         finalCost = 0;
         discountApplied = originalCost;
         appliedRule = `Inclus dans le forfait ${activeSubscription.planName}`;
         paymentMethod = 'SUBSCRIPTION';
+        breakdown = [];
       }
+      return { originalCost, finalCost, discountApplied, isOvertime, appliedRule, paymentMethod, hasActiveSubscription: true, roundedHours, breakdown };
     }
-    // Sinon pas de forfait = prix normal
+  }
 
-    return {
-      originalCost,
-      finalCost,
-      discountApplied,
-      isOvertime,
-      appliedRule,
-      paymentMethod,
-      hasActiveSubscription: !!activeSubscription,
-      roundedHours,
-      extraHours: activeSubscription ? Math.max(0, roundedHours - 1) : roundedHours,
-      hourlyRate,
-    };
+  /**
+   * Check if a DURATION formula applies at the given time (optional time window).
+   */
+  private durationFormulaAppliesNow(subscription: any, time: Date): boolean {
+    if (subscription.dayStartHour === null || subscription.dayEndHour === null) return true;
+    const hour = time.getHours();
+    const start = subscription.dayStartHour;
+    const end = subscription.dayEndHour;
+    if (start <= end) return hour >= start && hour < end;
+    return hour >= start || hour < end; // overnight
   }
 
   /**
@@ -661,16 +726,27 @@ export class RideService {
         startDate: { lte: new Date() },
         endDate: { gte: new Date() }
       },
-      include: { plan: { include: { overrides: true } } }
+      include: {
+        plan: { include: { overrides: true } },
+        formula: true,
+        package: true,
+      }
     });
 
     if (activeSubscription) {
+      const formula = activeSubscription.formula as any;
       return {
         id: activeSubscription.id,
         planId: activeSubscription.planId,
-        planName: activeSubscription.plan?.name || 'Unknown',
+        planName: activeSubscription.plan?.name || activeSubscription.package?.name || 'Unknown',
         packageType: activeSubscription.type,
-        type: 'SUBSCRIPTION'
+        type: 'SUBSCRIPTION',
+        // Champs formule nouveau système
+        formulaType: formula?.formulaType ?? 'TIME_WINDOW',
+        maxRideDurationHours: formula?.maxRideDurationHours ?? null,
+        dayStartHour: formula?.dayStartHour ?? null,
+        dayEndHour: formula?.dayEndHour ?? null,
+        usedRideMinutes: (activeSubscription as any).usedRideMinutes ?? 0,
       };
     }
 

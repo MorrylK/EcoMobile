@@ -3,6 +3,7 @@ import { AuthRequest, logActivity } from '../middleware/auth';
 import { RideService } from '../services';
 import { asyncHandler } from '../middleware/errorHandler';
 import { t } from '../locales';
+import { prisma } from '../config/prisma';
 
 export class RideController {
   private rideService: RideService;
@@ -354,5 +355,46 @@ export class RideController {
       success: true,
       data: ride
     });
+  });
+
+  reportIssue = asyncHandler(async (req: AuthRequest, res: express.Response) => {
+    const language = req.language || 'fr';
+    const userId = req.user!.id;
+    const { id } = req.params;
+    const { type, description } = req.body;
+
+    const ride = await prisma.ride.findFirst({ where: { id, userId } });
+
+    if (!ride) {
+      return res.status(404).json({ success: false, message: t('ride.not_found', language) });
+    }
+
+    const incident = await prisma.incident.create({
+      data: {
+        type: type || 'OTHER',
+        description: description || '',
+        bikeId: ride.bikeId,
+        userId,
+        status: 'OPEN'
+      }
+    });
+
+    await logActivity(userId, 'CREATE', 'INCIDENT', incident.id, `Issue reported for ride ${id}`, { rideId: id, type }, req);
+
+    return res.status(201).json({ success: true, message: t('incidents.created_success', language), data: incident });
+  });
+
+  getRideEstimate = asyncHandler(async (req: AuthRequest, res: express.Response) => {
+    const duration = parseFloat(req.query.duration as string) || 0;
+    const distance = parseFloat(req.query.distance as string) || 0;
+
+    const pricingConfig = await prisma.pricingConfig.findFirst({ where: { isActive: true } });
+    const hourlyRate = pricingConfig?.baseHourlyRate ?? 200;
+    const unlockFee = pricingConfig?.unlockFee ?? 0;
+
+    const durationHours = duration / 60;
+    const cost = Math.ceil(unlockFee + durationHours * hourlyRate);
+
+    res.status(200).json({ success: true, data: { cost, hourlyRate, unlockFee, duration, distance } });
   });
 }

@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import { Plus, Edit, Trash2, X, Check, ChevronDown, ChevronUp, Clock, Eye, EyeOff } from 'lucide-react';
+import { Plus, Edit, Trash2, X, Check, ChevronDown, ChevronUp, Clock, Eye, EyeOff, AlertTriangle, Moon, Sun, ToggleLeft, ToggleRight } from 'lucide-react';
 import { Card } from '../../ui/card';
 import { Button } from '../../ui/button';
 import { Badge } from '../../ui/badge';
@@ -11,7 +11,7 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '.
 import { Textarea } from '../../ui/textarea';
 import { toast } from 'sonner';
 import { useTranslation } from '../../../lib/i18n';
-import { adminService } from '../../../services/api/admin.service';
+import { adminService, PricingTier, PricingTierConflict } from '../../../services/api/admin.service';
 import { companyService, PricingPlan, PricingRule, PricingConfig as PricingConfigType } from '../../../services/api/company.service';
 import { usePermissions } from '../../../hooks/usePermissions';
 
@@ -92,6 +92,23 @@ export function SubscriptionPackageManager() {
   const [pricingFormErrors, setPricingFormErrors] = useState<{ planName?: string; multiplier?: string }>({});
   const [isEditingHourlyPricing, setIsEditingHourlyPricing] = useState(false);
 
+  // PricingTier states
+  const [pricingTiers, setPricingTiers] = useState<PricingTier[]>([]);
+  const [tierConflicts, setTierConflicts] = useState<{ tier: PricingTier; conflicts: PricingTierConflict[] }[]>([]);
+  const [isLoadingTiers, setIsLoadingTiers] = useState(true);
+  const [isAddingTier, setIsAddingTier] = useState(false);
+  const [isEditingTier, setIsEditingTier] = useState(false);
+  const [selectedTier, setSelectedTier] = useState<PricingTier | null>(null);
+  const [tierForm, setTierForm] = useState({
+    name: '',
+    durationMinutes: 60,
+    price: 0,
+    hasTimeWindow: false,
+    dayStartHour: 22,
+    dayEndHour: 6,
+    isActive: true
+  });
+
   // Confirmation states
   const [deleteConfirm, setDeleteConfirm] = useState<{ type: 'package' | 'formula' | 'promotion'; id: string; name: string } | null>(null);
 
@@ -104,13 +121,15 @@ export function SubscriptionPackageManager() {
   const [formulaForm, setFormulaForm] = useState({
     name: '',
     description: '',
+    formulaType: 'TIME_WINDOW',
     numberOfDays: 1,
     price: 0,
     dayStartHour: 0,
     dayEndHour: 23,
     chargeAfterHours: false,
     afterHoursPrice: 0,
-    afterHoursType: 'FIXED_PRICE'
+    afterHoursType: 'FIXED_PRICE',
+    maxRideDurationHours: 1
   });
 
   const [promotionForm, setPromotionForm] = useState({
@@ -145,6 +164,7 @@ export function SubscriptionPackageManager() {
     loadPromotions();
     loadFreeDaysRules();
     loadPricing();
+    loadPricingTiers();
   }, []);
 
   const loadPackages = async () => {
@@ -306,13 +326,15 @@ export function SubscriptionPackageManager() {
       setFormulaForm({
         name: '',
         description: '',
+        formulaType: 'TIME_WINDOW',
         numberOfDays: 1,
         price: 0,
         dayStartHour: 0,
         dayEndHour: 23,
         chargeAfterHours: false,
         afterHoursPrice: 0,
-        afterHoursType: 'FIXED_PRICE'
+        afterHoursType: 'FIXED_PRICE',
+        maxRideDurationHours: 1
       });
     } catch (error) {
       toast.error('Erreur lors de la sauvegarde');
@@ -581,6 +603,106 @@ export function SubscriptionPackageManager() {
     } catch (error: any) { toast.error(error?.message || 'Erreur'); }
   };
 
+  // ── PricingTier handlers ────────────────────────────────────────────────
+
+  const loadPricingTiers = async () => {
+    try {
+      setIsLoadingTiers(true);
+      const tiers = await adminService.getPricingTiers();
+      setPricingTiers(tiers);
+      const conflicts = await adminService.getPricingTierConflicts();
+      setTierConflicts(conflicts);
+    } catch (error: any) {
+      console.error('loadPricingTiers error', error);
+    } finally {
+      setIsLoadingTiers(false);
+    }
+  };
+
+  const openAddTierDialog = () => {
+    setTierForm({ name: '', durationMinutes: 60, price: 0, hasTimeWindow: false, dayStartHour: 22, dayEndHour: 6, isActive: true });
+    setSelectedTier(null);
+    setIsAddingTier(true);
+  };
+
+  const openEditTierDialog = (tier: PricingTier) => {
+    setTierForm({
+      name: tier.name || '',
+      durationMinutes: tier.durationMinutes,
+      price: tier.price,
+      hasTimeWindow: tier.dayStartHour != null,
+      dayStartHour: tier.dayStartHour ?? 22,
+      dayEndHour: tier.dayEndHour ?? 6,
+      isActive: tier.isActive
+    });
+    setSelectedTier(tier);
+    setIsEditingTier(true);
+  };
+
+  const handleSaveTier = async () => {
+    if (!tierForm.durationMinutes || tierForm.price < 0) {
+      toast.error('Durée et prix sont requis');
+      return;
+    }
+    try {
+      const data = {
+        name: tierForm.name || undefined,
+        durationMinutes: tierForm.durationMinutes,
+        price: tierForm.price,
+        dayStartHour: tierForm.hasTimeWindow ? tierForm.dayStartHour : null,
+        dayEndHour: tierForm.hasTimeWindow ? tierForm.dayEndHour : null,
+        isActive: tierForm.isActive
+      };
+      const result = isEditingTier && selectedTier
+        ? await adminService.updatePricingTier(selectedTier.id, data)
+        : await adminService.createPricingTier(data as any);
+
+      if (result.conflicts.length > 0) {
+        toast.warning(`Palier sauvegardé avec ${result.conflicts.length} conflit(s) détecté(s)`);
+      } else {
+        toast.success(isEditingTier ? 'Palier mis à jour' : 'Palier créé');
+      }
+      await loadPricingTiers();
+      setIsAddingTier(false);
+      setIsEditingTier(false);
+      setSelectedTier(null);
+    } catch (error: any) {
+      toast.error(error?.message || 'Erreur lors de la sauvegarde');
+    }
+  };
+
+  const handleDeleteTier = async (id: string) => {
+    if (!confirm('Supprimer ce palier ?')) return;
+    try {
+      await adminService.deletePricingTier(id);
+      toast.success('Palier supprimé');
+      await loadPricingTiers();
+    } catch (error: any) {
+      toast.error(error?.message || 'Erreur lors de la suppression');
+    }
+  };
+
+  const handleToggleTierActive = async (id: string) => {
+    try {
+      await adminService.togglePricingTierActive(id);
+      await loadPricingTiers();
+    } catch (error: any) {
+      toast.error(error?.message || 'Erreur');
+    }
+  };
+
+  const handleSaveFallbackRate = async () => {
+    try {
+      await adminService.updateFallbackRate(editedHourlyPricing.baseHourlyRate);
+      toast.success('Tarif de secours mis à jour');
+      setIsEditingHourlyPricing(false);
+    } catch (error: any) {
+      toast.error(error?.message || 'Erreur');
+    }
+  };
+
+  const formatHour = (h: number) => `${h.toString().padStart(2, '0')}h`;
+
   const daysOfWeek = [
     { value: null, label: language === 'fr' ? 'Tous les jours' : 'All days' },
     { value: 0, label: language === 'fr' ? 'Dimanche' : 'Sunday' },
@@ -605,55 +727,117 @@ export function SubscriptionPackageManager() {
         </p>
       </div>
 
-      {/* Tarification à l'heure */}
+      {/* Tarification sans forfait */}
       <Card className="p-6">
         <div className="flex items-center justify-between mb-4">
           <div>
-            <h2 className="text-xl font-bold text-gray-900">{language === 'fr' ? "Tarification à l'heure" : 'Hourly Pricing'}</h2>
-            <p className="text-sm text-gray-600">{language === 'fr' ? "Frais de déverrouillage et tarif horaire de base (sans abonnement)." : "Unlock fee and base hourly rate (without subscription)."}</p>
+            <h2 className="text-xl font-bold text-gray-900">{language === 'fr' ? 'Tarification sans forfait' : 'Pay-as-you-go Pricing'}</h2>
+            <p className="text-sm text-gray-600">
+              {language === 'fr'
+                ? 'Paliers tarifaires appliqués à la fin de chaque trajet (algorithme glouton). Le tarif de secours est appliqué si aucun palier ne correspond.'
+                : 'Pricing tiers applied at ride end (greedy algorithm). Fallback rate is used when no tier matches.'}
+            </p>
           </div>
-          {can.updatePricing() && !isEditingHourlyPricing && (
-            <Button variant="outline" onClick={() => setIsEditingHourlyPricing(true)}>
-              <Edit className="w-4 h-4 mr-2" />{language === 'fr' ? 'Modifier' : 'Edit'}
+          {can.createPricing() && (
+            <Button className="bg-green-600 text-white hover:bg-green-700" onClick={openAddTierDialog}>
+              <Plus className="w-4 h-4 mr-2" />{language === 'fr' ? 'Nouveau palier' : 'New tier'}
             </Button>
           )}
         </div>
-        {isEditingHourlyPricing ? (
-          <div>
-            <div className="grid grid-cols-1 sm:grid-cols-2 gap-6">
-              <div>
-                <Label>{language === 'fr' ? 'Frais de déverrouillage (FCFA)' : 'Unlock fee (FCFA)'}</Label>
-                <Input type="number" min="0" value={editedHourlyPricing.unlockFee}
-                  onChange={(e) => setEditedHourlyPricing({ ...editedHourlyPricing, unlockFee: parseFloat(e.target.value) || 0 })} />
-              </div>
-              <div>
-                <Label>{language === 'fr' ? 'Tarif horaire de base (FCFA/h)' : 'Base hourly rate (FCFA/h)'}</Label>
-                <Input type="number" min="0" value={editedHourlyPricing.baseHourlyRate}
+
+        {/* Fallback rate */}
+        <div className="mb-6 p-4 bg-amber-50 border border-amber-200 rounded-lg">
+          <div className="flex items-center justify-between">
+            <div>
+              <p className="font-medium text-amber-900">{language === 'fr' ? 'Tarif de secours' : 'Fallback rate'}</p>
+              <p className="text-sm text-amber-700">{language === 'fr' ? 'Appliqué par heure non couverte par un palier' : 'Applied per hour not covered by any tier'}</p>
+            </div>
+            {isEditingHourlyPricing ? (
+              <div className="flex items-center gap-2">
+                <Input type="number" min="0" className="w-28"
+                  value={editedHourlyPricing.baseHourlyRate}
                   onChange={(e) => setEditedHourlyPricing({ ...editedHourlyPricing, baseHourlyRate: parseFloat(e.target.value) || 0 })} />
+                <span className="text-sm text-amber-700">FCFA/h</span>
+                <Button size="sm" variant="outline" onClick={() => setIsEditingHourlyPricing(false)}><X className="w-4 h-4" /></Button>
+                <Button size="sm" className="bg-green-600 text-white hover:bg-green-700" onClick={handleSaveFallbackRate}><Check className="w-4 h-4" /></Button>
               </div>
-            </div>
-            <div className="mt-4 flex justify-end gap-2">
-              <Button variant="outline" onClick={() => {
-                setIsEditingHourlyPricing(false);
-                setEditedHourlyPricing({ unlockFee: pricingConfig?.unlockFee || 0, baseHourlyRate: pricingConfig?.baseHourlyRate || 0 });
-              }}>
-                <X className="w-4 h-4 mr-2" />{language === 'fr' ? 'Annuler' : 'Cancel'}
-              </Button>
-              <Button className="bg-green-600 text-white hover:bg-green-700" onClick={async () => { await handleSaveHourlyPricing(); setIsEditingHourlyPricing(false); }}>
-                <Check className="w-4 h-4 mr-2" />{language === 'fr' ? 'Enregistrer' : 'Save'}
-              </Button>
-            </div>
+            ) : (
+              <div className="flex items-center gap-3">
+                <span className="text-2xl font-bold text-amber-900">{pricingConfig?.baseHourlyRate ?? editedHourlyPricing.baseHourlyRate} <span className="text-sm font-normal">FCFA/h</span></span>
+                {can.updatePricing() && (
+                  <Button size="sm" variant="outline" onClick={() => setIsEditingHourlyPricing(true)}><Edit className="w-4 h-4" /></Button>
+                )}
+              </div>
+            )}
           </div>
+        </div>
+
+        {/* Conflict warnings */}
+        {tierConflicts.length > 0 && (
+          <div className="mb-4 p-3 bg-yellow-50 border border-yellow-300 rounded-lg">
+            <div className="flex items-center gap-2 mb-2">
+              <AlertTriangle className="w-4 h-4 text-yellow-600" />
+              <span className="font-medium text-yellow-800">{language === 'fr' ? `${tierConflicts.length} conflit(s) détecté(s)` : `${tierConflicts.length} conflict(s) detected`}</span>
+            </div>
+            {tierConflicts.map(({ tier, conflicts }) => (
+              <div key={tier.id} className="text-sm text-yellow-700 ml-6">
+                {conflicts.map(c => (
+                  <div key={c.tierId}>
+                    {tier.name || `${tier.durationMinutes / 60}h`} ↔ {c.tierName} : chevauchement {formatHour(c.overlapStart)}–{formatHour(c.overlapEnd)} → <strong>{c.priorityWinner}</strong> prioritaire
+                  </div>
+                ))}
+              </div>
+            ))}
+          </div>
+        )}
+
+        {/* Tiers list */}
+        {isLoadingTiers ? (
+          <p className="text-gray-500 text-sm">{language === 'fr' ? 'Chargement...' : 'Loading...'}</p>
+        ) : pricingTiers.length === 0 ? (
+          <p className="text-gray-500 text-sm text-center py-6">
+            {language === 'fr' ? 'Aucun palier configuré. Ajoutez un palier pour commencer.' : 'No tiers configured. Add a tier to get started.'}
+          </p>
         ) : (
-          <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-            <div className="bg-gray-50 p-4 rounded-lg">
-              <p className="text-sm text-gray-500 mb-1">{language === 'fr' ? 'Frais de déverrouillage' : 'Unlock fee'}</p>
-              <p className="text-2xl font-bold text-gray-900">{pricingConfig?.unlockFee ?? editedHourlyPricing.unlockFee} <span className="text-sm font-normal text-gray-500">FCFA</span></p>
-            </div>
-            <div className="bg-gray-50 p-4 rounded-lg">
-              <p className="text-sm text-gray-500 mb-1">{language === 'fr' ? 'Tarif horaire de base' : 'Base hourly rate'}</p>
-              <p className="text-2xl font-bold text-gray-900">{pricingConfig?.baseHourlyRate ?? editedHourlyPricing.baseHourlyRate} <span className="text-sm font-normal text-gray-500">FCFA/h</span></p>
-            </div>
+          <div className="space-y-2">
+            {pricingTiers.map(tier => (
+              <div key={tier.id} className={`flex items-center justify-between p-3 rounded-lg border ${tier.isActive ? 'bg-white border-gray-200' : 'bg-gray-50 border-gray-100 opacity-60'}`}>
+                <div className="flex items-center gap-3">
+                  <div>
+                    <div className="flex items-center gap-2">
+                      <span className="font-medium text-gray-900">
+                        {tier.name || `${tier.durationMinutes / 60}h`}
+                      </span>
+                      {tier.dayStartHour != null && (
+                        <span className="flex items-center gap-1 text-xs px-2 py-0.5 rounded-full bg-indigo-100 text-indigo-700">
+                          <Moon className="w-3 h-3" />{formatHour(tier.dayStartHour!)} – {formatHour(tier.dayEndHour!)}
+                        </span>
+                      )}
+                      {!tier.isActive && (
+                        <span className="text-xs px-2 py-0.5 rounded-full bg-gray-200 text-gray-500">{language === 'fr' ? 'Inactif' : 'Inactive'}</span>
+                      )}
+                    </div>
+                    <div className="text-sm text-gray-500">
+                      {tier.durationMinutes / 60}h — <strong className="text-gray-700">{tier.price} FCFA</strong>
+                      <span className="ml-2 text-xs text-gray-400">({Math.round(tier.price / (tier.durationMinutes / 60))} FCFA/h)</span>
+                    </div>
+                  </div>
+                </div>
+                <div className="flex items-center gap-1">
+                  {can.updatePricing() && (
+                    <Button size="sm" variant="ghost" title={tier.isActive ? 'Désactiver' : 'Activer'} onClick={() => handleToggleTierActive(tier.id)}>
+                      {tier.isActive ? <ToggleRight className="w-4 h-4 text-green-600" /> : <ToggleLeft className="w-4 h-4 text-gray-400" />}
+                    </Button>
+                  )}
+                  {can.updatePricing() && (
+                    <Button size="sm" variant="ghost" onClick={() => openEditTierDialog(tier)}><Edit className="w-4 h-4" /></Button>
+                  )}
+                  {can.deletePricing() && (
+                    <Button size="sm" variant="ghost" className="text-red-500 hover:text-red-700" onClick={() => handleDeleteTier(tier.id)}><Trash2 className="w-4 h-4" /></Button>
+                  )}
+                </div>
+              </div>
+            ))}
           </div>
         )}
       </Card>
@@ -775,13 +959,15 @@ export function SubscriptionPackageManager() {
                             setFormulaForm({
                               name: '',
                               description: '',
+                              formulaType: 'TIME_WINDOW',
                               numberOfDays: 1,
                               price: 0,
                               dayStartHour: 0,
                               dayEndHour: 23,
                               chargeAfterHours: false,
                               afterHoursPrice: 0,
-                              afterHoursType: 'FIXED_PRICE'
+                              afterHoursType: 'FIXED_PRICE',
+                              maxRideDurationHours: 1
                             });
                           }}
                           className="flex items-center gap-1"
@@ -798,13 +984,28 @@ export function SubscriptionPackageManager() {
                           <div key={formula.id} className="bg-white p-4 rounded-lg border border-gray-200">
                             <div className="flex items-start justify-between">
                               <div className="flex-1">
-                                <h5 className="font-semibold text-gray-900">{formula.name}</h5>
+                                <div className="flex items-center gap-2">
+                                  <h5 className="font-semibold text-gray-900">{formula.name}</h5>
+                                  <span className={`text-xs px-2 py-0.5 rounded-full font-medium ${
+                                    formula.formulaType === 'DURATION'
+                                      ? 'bg-purple-100 text-purple-700'
+                                      : 'bg-blue-100 text-blue-700'
+                                  }`}>
+                                    {formula.formulaType === 'DURATION' ? 'Durée' : 'Plage horaire'}
+                                  </span>
+                                </div>
                                 <div className="grid grid-cols-2 gap-4 text-sm text-gray-600 mt-2">
-                                  <div><strong>Jours:</strong> {formula.numberOfDays}</div>
-                                  <div><strong>Prix:</strong> {formula.price}</div>
-                                  <div><strong>Horaires:</strong> {formula.dayStartHour}h-{formula.dayEndHour}h</div>
-                                  {formula.chargeAfterHours && (
-                                    <div><strong>Après horaire:</strong> {formula.afterHoursPrice}</div>
+                                  <div><strong>Validité:</strong> {formula.numberOfDays} jour{formula.numberOfDays > 1 ? 's' : ''}</div>
+                                  <div><strong>Prix:</strong> {formula.price} XOF</div>
+                                  {formula.formulaType === 'DURATION' ? (
+                                    <div><strong>Heures accordées:</strong> {formula.maxRideDurationHours ?? '—'}h</div>
+                                  ) : (
+                                    <>
+                                      <div><strong>Horaires:</strong> {formula.dayStartHour}h–{formula.dayEndHour}h</div>
+                                      {formula.chargeAfterHours && (
+                                        <div><strong>Après horaire:</strong> {formula.afterHoursPrice} XOF</div>
+                                      )}
+                                    </>
                                   )}
                                 </div>
                               </div>
@@ -1214,9 +1415,30 @@ export function SubscriptionPackageManager() {
               />
             </div>
 
+            {/* Type de formule */}
+            <div>
+              <Label>{language === 'fr' ? 'Type de formule' : 'Formula type'}</Label>
+              <Select
+                value={(formulaForm as any).formulaType ?? 'TIME_WINDOW'}
+                onValueChange={(value) => setFormulaForm({ ...formulaForm, formulaType: value } as any)}
+              >
+                <SelectTrigger>
+                  <SelectValue />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="TIME_WINDOW">
+                    {language === 'fr' ? 'Plage horaire (accès par jour)' : 'Time window (daily access)'}
+                  </SelectItem>
+                  <SelectItem value="DURATION">
+                    {language === 'fr' ? 'Durée totale (heures de trajet)' : 'Total duration (ride hours)'}
+                  </SelectItem>
+                </SelectContent>
+              </Select>
+            </div>
+
             <div className="grid grid-cols-2 gap-4">
               <div>
-                <Label>{language === 'fr' ? 'Nombre de Jours' : 'Number of Days'}</Label>
+                <Label>{language === 'fr' ? 'Validité (jours)' : 'Validity (days)'}</Label>
                 <Input
                   type="number"
                   value={formulaForm.numberOfDays}
@@ -1226,79 +1448,103 @@ export function SubscriptionPackageManager() {
               </div>
 
               <div>
-                <Label>{language === 'fr' ? 'Prix' : 'Price'}</Label>
+                <Label>{language === 'fr' ? 'Prix (XOF)' : 'Price (XOF)'}</Label>
                 <Input
                   type="number"
                   value={formulaForm.price}
                   onChange={(e) => setFormulaForm({ ...formulaForm, price: parseFloat(e.target.value) })}
-                  step="0.01"
+                  step="1"
                   min="0"
                 />
               </div>
             </div>
 
-            <div className="grid grid-cols-2 gap-4">
+            {/* Champs spécifiques DURATION */}
+            {(formulaForm as any).formulaType === 'DURATION' && (
               <div>
-                <Label>{language === 'fr' ? 'Heure de Début' : 'Start Hour'}</Label>
+                <Label>{language === 'fr' ? 'Heures de trajet accordées' : 'Ride hours granted'}</Label>
                 <Input
                   type="number"
-                  value={formulaForm.dayStartHour}
-                  onChange={(e) => setFormulaForm({ ...formulaForm, dayStartHour: parseInt(e.target.value) })}
-                  min="0"
-                  max="23"
+                  value={(formulaForm as any).maxRideDurationHours ?? 1}
+                  onChange={(e) => setFormulaForm({ ...formulaForm, maxRideDurationHours: parseFloat(e.target.value) } as any)}
+                  step="0.5"
+                  min="0.5"
                 />
+                <p className="text-xs text-gray-500 mt-1">
+                  {language === 'fr'
+                    ? 'Ex: 5 = 5 heures de vélo utilisables pendant la période de validité'
+                    : 'E.g.: 5 = 5 ride hours usable during validity period'}
+                </p>
               </div>
+            )}
 
-              <div>
-                <Label>{language === 'fr' ? 'Heure de Fin' : 'End Hour'}</Label>
-                <Input
-                  type="number"
-                  value={formulaForm.dayEndHour}
-                  onChange={(e) => setFormulaForm({ ...formulaForm, dayEndHour: parseInt(e.target.value) })}
-                  min="0"
-                  max="23"
-                />
-              </div>
-            </div>
+            {/* Champs spécifiques TIME_WINDOW */}
+            {((formulaForm as any).formulaType ?? 'TIME_WINDOW') === 'TIME_WINDOW' && (
+              <>
+                <div className="grid grid-cols-2 gap-4">
+                  <div>
+                    <Label>{language === 'fr' ? 'Heure de Début' : 'Start Hour'}</Label>
+                    <Input
+                      type="number"
+                      value={formulaForm.dayStartHour}
+                      onChange={(e) => setFormulaForm({ ...formulaForm, dayStartHour: parseInt(e.target.value) })}
+                      min="0"
+                      max="23"
+                    />
+                  </div>
 
-            <div className="flex items-center gap-2">
-              <Switch
-                checked={formulaForm.chargeAfterHours}
-                onCheckedChange={(checked: any) => setFormulaForm({ ...formulaForm, chargeAfterHours: checked })}
-              />
-              <Label>{language === 'fr' ? 'Facturer après les horaires' : 'Charge after hours'}</Label>
-            </div>
+                  <div>
+                    <Label>{language === 'fr' ? 'Heure de Fin' : 'End Hour'}</Label>
+                    <Input
+                      type="number"
+                      value={formulaForm.dayEndHour}
+                      onChange={(e) => setFormulaForm({ ...formulaForm, dayEndHour: parseInt(e.target.value) })}
+                      min="0"
+                      max="23"
+                    />
+                  </div>
+                </div>
 
-            {formulaForm.chargeAfterHours && (
-              <div className="grid grid-cols-2 gap-4">
-                <div>
-                  <Label>{language === 'fr' ? 'Prix Après Horaire' : 'After Hours Price'}</Label>
-                  <Input
-                    type="number"
-                    value={formulaForm.afterHoursPrice}
-                    onChange={(e) => setFormulaForm({ ...formulaForm, afterHoursPrice: parseFloat(e.target.value) })}
-                    step="0.01"
-                    min="0"
+                <div className="flex items-center gap-2">
+                  <Switch
+                    checked={formulaForm.chargeAfterHours}
+                    onCheckedChange={(checked: any) => setFormulaForm({ ...formulaForm, chargeAfterHours: checked })}
                   />
+                  <Label>{language === 'fr' ? 'Facturer après les horaires' : 'Charge after hours'}</Label>
                 </div>
 
-                <div>
-                  <Label>{language === 'fr' ? 'Type' : 'Type'}</Label>
-                  <Select value={formulaForm.afterHoursType} onValueChange={(value) => setFormulaForm({ ...formulaForm, afterHoursType: value })}>
-                    <SelectTrigger>
-                      <SelectValue />
-                    </SelectTrigger>
-                    <SelectContent>
-                      <SelectItem value="FIXED_PRICE">
-                        {language === 'fr' ? 'Prix Fixe' : 'Fixed Price'}
-                      </SelectItem>
-                      <SelectItem value="PERCENTAGE">
-                        {language === 'fr' ? 'Pourcentage' : 'Percentage'}
-                      </SelectItem>
-                    </SelectContent>
-                  </Select>
-                </div>
-              </div>
+                {formulaForm.chargeAfterHours && (
+                  <div className="grid grid-cols-2 gap-4">
+                    <div>
+                      <Label>{language === 'fr' ? 'Prix Après Horaire' : 'After Hours Price'}</Label>
+                      <Input
+                        type="number"
+                        value={formulaForm.afterHoursPrice}
+                        onChange={(e) => setFormulaForm({ ...formulaForm, afterHoursPrice: parseFloat(e.target.value) })}
+                        step="0.01"
+                        min="0"
+                      />
+                    </div>
+
+                    <div>
+                      <Label>{language === 'fr' ? 'Type' : 'Type'}</Label>
+                      <Select value={formulaForm.afterHoursType} onValueChange={(value) => setFormulaForm({ ...formulaForm, afterHoursType: value })}>
+                        <SelectTrigger>
+                          <SelectValue />
+                        </SelectTrigger>
+                        <SelectContent>
+                          <SelectItem value="FIXED_PRICE">
+                            {language === 'fr' ? 'Prix Fixe' : 'Fixed Price'}
+                          </SelectItem>
+                          <SelectItem value="PERCENTAGE">
+                            {language === 'fr' ? 'Pourcentage' : 'Percentage'}
+                          </SelectItem>
+                        </SelectContent>
+                      </Select>
+                    </div>
+                  </div>
+                )}
+              </>
             )}
           </div>
 
@@ -1850,6 +2096,79 @@ export function SubscriptionPackageManager() {
           <DialogFooter>
             <Button variant="outline" onClick={() => setIsDeletingRule(null)}>{language === 'fr' ? 'Annuler' : 'Cancel'}</Button>
             <Button className="bg-red-600 text-white hover:bg-red-700" onClick={() => isDeletingRule && handleDeleteRule(isDeletingRule)}>{language === 'fr' ? 'Supprimer' : 'Delete'}</Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
+
+      {/* PricingTier Add/Edit Dialog */}
+      <Dialog open={isAddingTier || isEditingTier} onOpenChange={(open) => { if (!open) { setIsAddingTier(false); setIsEditingTier(false); setSelectedTier(null); } }}>
+        <DialogContent className="max-w-md">
+          <DialogHeader>
+            <DialogTitle>{isEditingTier ? (language === 'fr' ? 'Modifier le palier' : 'Edit tier') : (language === 'fr' ? 'Nouveau palier tarifaire' : 'New pricing tier')}</DialogTitle>
+            <DialogDescription>
+              {language === 'fr'
+                ? 'Un palier définit un prix fixe pour une durée donnée (ex: 1h = 250 FCFA). Plage horaire optionnelle pour des tarifs nuit/jour.'
+                : 'A tier defines a flat price for a given duration (e.g. 1h = 250 FCFA). Optional time window for night/day rates.'}
+            </DialogDescription>
+          </DialogHeader>
+          <div className="space-y-4">
+            <div>
+              <Label>{language === 'fr' ? 'Nom (optionnel)' : 'Name (optional)'}</Label>
+              <Input value={tierForm.name} onChange={(e) => setTierForm({ ...tierForm, name: e.target.value })} placeholder={language === 'fr' ? 'ex: Tarif nuit' : 'e.g. Night rate'} />
+            </div>
+            <div className="grid grid-cols-2 gap-4">
+              <div>
+                <Label>{language === 'fr' ? 'Durée (minutes)' : 'Duration (minutes)'}</Label>
+                <Input type="number" min="60" step="60" value={tierForm.durationMinutes}
+                  onChange={(e) => setTierForm({ ...tierForm, durationMinutes: parseInt(e.target.value) || 60 })} />
+                <p className="text-xs text-gray-500 mt-1">{Math.round(tierForm.durationMinutes / 60)}h</p>
+              </div>
+              <div>
+                <Label>{language === 'fr' ? 'Prix (FCFA)' : 'Price (FCFA)'}</Label>
+                <Input type="number" min="0" value={tierForm.price}
+                  onChange={(e) => setTierForm({ ...tierForm, price: parseFloat(e.target.value) || 0 })} />
+              </div>
+            </div>
+            <div className="flex items-center gap-2">
+              <Switch checked={tierForm.hasTimeWindow} onCheckedChange={(checked: boolean) => setTierForm({ ...tierForm, hasTimeWindow: checked })} />
+              <Label className="flex items-center gap-1">
+                <Moon className="w-4 h-4" />
+                {language === 'fr' ? 'Plage horaire spécifique' : 'Specific time window'}
+              </Label>
+            </div>
+            {tierForm.hasTimeWindow && (
+              <div className="grid grid-cols-2 gap-4 pl-8">
+                <div>
+                  <Label>{language === 'fr' ? 'Heure de début' : 'Start hour'}</Label>
+                  <Input type="number" min="0" max="23" value={tierForm.dayStartHour}
+                    onChange={(e) => setTierForm({ ...tierForm, dayStartHour: parseInt(e.target.value) || 0 })} />
+                </div>
+                <div>
+                  <Label>{language === 'fr' ? 'Heure de fin' : 'End hour'}</Label>
+                  <Input type="number" min="0" max="23" value={tierForm.dayEndHour}
+                    onChange={(e) => setTierForm({ ...tierForm, dayEndHour: parseInt(e.target.value) || 0 })} />
+                </div>
+                {tierForm.dayStartHour !== tierForm.dayEndHour && (
+                  <p className="col-span-2 text-xs text-indigo-600">
+                    {tierForm.dayStartHour > tierForm.dayEndHour
+                      ? `Nuit : ${formatHour(tierForm.dayStartHour)} → ${formatHour(tierForm.dayEndHour)} (lendemain)`
+                      : `Jour : ${formatHour(tierForm.dayStartHour)} → ${formatHour(tierForm.dayEndHour)}`}
+                  </p>
+                )}
+              </div>
+            )}
+            <div className="flex items-center gap-2">
+              <Switch checked={tierForm.isActive} onCheckedChange={(checked: boolean) => setTierForm({ ...tierForm, isActive: checked })} />
+              <Label>{language === 'fr' ? 'Actif' : 'Active'}</Label>
+            </div>
+          </div>
+          <DialogFooter>
+            <Button variant="outline" onClick={() => { setIsAddingTier(false); setIsEditingTier(false); setSelectedTier(null); }}>
+              {language === 'fr' ? 'Annuler' : 'Cancel'}
+            </Button>
+            <Button className="bg-green-600 text-white hover:bg-green-700" onClick={handleSaveTier}>
+              {language === 'fr' ? 'Enregistrer' : 'Save'}
+            </Button>
           </DialogFooter>
         </DialogContent>
       </Dialog>

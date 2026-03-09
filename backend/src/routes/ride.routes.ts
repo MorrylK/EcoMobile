@@ -35,6 +35,20 @@ router.post('/:id/cancel', authenticate, idValidator, validate, rideController.c
 router.get('/:id/details', authenticate, idValidator, validate, rideController.getRideDetails);
 
 /**
+ * @route   POST /api/v1/rides/:id/report-issue
+ * @desc    Report an issue for a ride
+ * @access  Private
+ */
+router.post('/:id/report-issue', authenticate, idValidator, validate, rideController.reportIssue);
+
+/**
+ * @route   GET /api/v1/rides/estimate
+ * @desc    Get ride cost estimate
+ * @access  Private
+ */
+router.get('/estimate', authenticate, rideController.getRideEstimate);
+
+/**
  * @route   GET /api/v1/rides/stats
  * @desc    Get user's ride statistics
  * @access  Private

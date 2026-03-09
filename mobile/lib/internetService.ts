@@ -1,6 +1,7 @@
 import NetInfo, { NetInfoState } from '@react-native-community/netinfo';
 import { toast } from '@/components/ui/Toast';
 import { haptics } from '@/utils/haptics';
+import { getTranslationSync } from '@/lib/mobile-i18n';
 
 class InternetService {
   private static instance: InternetService;
@@ -26,11 +27,11 @@ class InternetService {
 
       if (wasConnected && !this.isConnected) {
         // Déconnexion
-        toast.error('common.networkError');
+        toast.error(getTranslationSync('common.networkError'));
         haptics.error();
       } else if (!wasConnected && this.isConnected) {
         // Reconnexion
-        toast.success('common.networkRestored');
+        toast.success(getTranslationSync('common.networkRestored'));
         haptics.success();
       }
 
@@ -66,7 +67,7 @@ class InternetService {
 
   public requireConnection(): boolean {
     if (!this.isConnected) {
-      toast.error('auth.internetRequired');
+      toast.error(getTranslationSync('auth.internetRequired'));
       haptics.error();
       return false;
     }

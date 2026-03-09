@@ -35,11 +35,11 @@ export interface Bike {
   gpsDeviceId?: string;
   pricingPlan?: PricingPlan;
   currentPricing?: {
-    hourlyRate: number;
-    originalHourlyRate?: number;
-    appliedPromotions?: Array<{
-      name: string;
-    }>;
+    displayPrice: number;
+    durationHours: number;
+    isNight: boolean;
+    isFallback: boolean;
+    unlockFee: number;
   };
   lastMaintenanceAt?: string;
   createdAt: string;
