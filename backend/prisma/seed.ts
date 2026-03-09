@@ -582,7 +582,7 @@ async function main() {
     where: { id: '9170123060' }
   });
 
-  if (!bike1) {
+  if (!bike1 && !isProduction) {
     await prisma.bike.create({
       data: {
         id: '9170123060',
@@ -609,7 +609,7 @@ async function main() {
     where: { id: '9170123061' }
   });
 
-  if (!bike2) {
+  if (!bike2 && !isProduction) {
     await prisma.bike.create({
       data: {
         id: '9170123061',
