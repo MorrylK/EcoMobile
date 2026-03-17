@@ -28,8 +28,6 @@ export function BottomNavigation({ activeScreen, onNavigate }: BottomNavigationP
 
   return (
     <View style={[
-      styles.absolute,
-      { bottom: 0, left: 0, right: 0 },
       { backgroundColor: colors.card },
       { borderTopWidth: 1, borderTopColor: colors.border },
       { paddingBottom: 0 }

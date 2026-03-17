@@ -1,8 +1,12 @@
 /* eslint-disable @typescript-eslint/no-require-imports */
 /* eslint-disable react-hooks/exhaustive-deps */
 /* eslint-disable react/display-name */
-import React, { useRef, useImperativeHandle, forwardRef, useEffect, useCallback } from 'react';
-import { View, StyleSheet, Platform } from 'react-native';
+import React, { useRef, useImperativeHandle, forwardRef, useEffect, useCallback, useState } from 'react';
+import { View, StyleSheet, Platform, TouchableOpacity, Text } from 'react-native';
+import { useMobileI18n } from '@/lib/mobile-i18n';
+
+const GOOGLE_MAPS_KEY = process.env.EXPO_PUBLIC_GOOGLE_MAPS_API_KEY as string | undefined;
+const hasGoogleKey = !!GOOGLE_MAPS_KEY;
 
 interface MapBikeMarker {
   id: string;
@@ -43,7 +47,9 @@ export const OSMMap = forwardRef<OSMMapRef, OSMMapProps>(({
   const mapInstanceRef = useRef<any>(null);
   const leafletRef = useRef<any>(null);
   const isWeb = Platform.OS === 'web';
-  
+  const [mapProvider, setMapProvider] = useState<'osm' | 'google'>('osm');
+  const { t } = useMobileI18n();
+
   // Coordonnées par défaut (Douala, Cameroun)
   const center = userLocation || { lat: 4.0511, lng: 9.7679 };
   
@@ -719,27 +725,37 @@ export const OSMMap = forwardRef<OSMMapRef, OSMMapProps>(({
                     const bikeIcon = L.divIcon({
                         className: 'bike-marker',
                         html: \`
-                            <div style="
-                                background: \${batteryColor}; 
-                                color: white; 
-                                width: 32px; 
-                                height: 32px; 
-                                border-radius: 50%; 
-                                border: 2px solid white; 
-                                box-shadow: 0 2px 4px rgba(0,0,0,0.3);
-                                display: flex; 
-                                align-items: center; 
-                                justify-content: center; 
-                                font-size: 10px; 
-                                font-weight: bold;
-                                cursor: pointer;
-                                touch-action: manipulation;
-                            ">
-                                \${bike.batteryLevel}%
+                            <div style="display:flex;flex-direction:column;align-items:center;gap:3px;cursor:pointer;touch-action:manipulation;">
+                                <div style="
+                                    background: \${batteryColor};
+                                    color: white;
+                                    width: 32px;
+                                    height: 32px;
+                                    border-radius: 50%;
+                                    border: 2px solid white;
+                                    box-shadow: 0 2px 4px rgba(0,0,0,0.3);
+                                    display: flex;
+                                    align-items: center;
+                                    justify-content: center;
+                                    font-size: 10px;
+                                    font-weight: bold;
+                                ">
+                                    \${bike.batteryLevel}%
+                                </div>
+                                <div style="
+                                    background: rgba(0,0,0,0.72);
+                                    color: white;
+                                    font-size: 9px;
+                                    font-weight: 600;
+                                    padding: 1px 5px;
+                                    border-radius: 4px;
+                                    white-space: nowrap;
+                                    letter-spacing: 0.3px;
+                                ">\${bike.code}</div>
                             </div>
                         \`,
-                        iconSize: [36, 36],
-                        iconAnchor: [18, 18]
+                        iconSize: [46, 54],
+                        iconAnchor: [23, 36]
                     });
                     
                     const popupContent = \`
@@ -883,11 +899,39 @@ export const OSMMap = forwardRef<OSMMapRef, OSMMapProps>(({
   // Version mobile avec WebView - CONFIGURATION CORRIGÉE
   const ReactNativeWebView = require('react-native-webview').WebView;
 
+  // HTML Google Maps (injecté dans WebView si clé disponible)
+  const googleMapHTML = hasGoogleKey ? `<!DOCTYPE html>
+<html><head>
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+  <style>* { margin:0; padding:0; box-sizing:border-box; } html,body,#map { width:100%; height:100%; }</style>
+</head><body>
+  <div id="map"></div>
+  <script>
+    const bikes = ${JSON.stringify(bikesWithCoords.map(b => ({ id: b.id, code: b.code, model: b.model, latitude: b.latitude, longitude: b.longitude, batteryLevel: b.batteryLevel })))};
+    const center = { lat: ${center.lat}, lng: ${center.lng} };
+    function initMap() {
+      const map = new google.maps.Map(document.getElementById('map'), { center, zoom: 14, mapTypeControl: false, streetViewControl: false });
+      const iw = new google.maps.InfoWindow();
+      bikes.forEach(function(bike) {
+        const c = bike.batteryLevel > 50 ? '#22c55e' : bike.batteryLevel > 20 ? '#f59e0b' : '#ef4444';
+        const m = new google.maps.Marker({ position: { lat: bike.latitude, lng: bike.longitude }, map, title: bike.code, icon: { path: google.maps.SymbolPath.CIRCLE, scale: 14, fillColor: c, fillOpacity: 1, strokeColor: 'white', strokeWeight: 2 } });
+        const label = new google.maps.Marker({ position: { lat: bike.latitude, lng: bike.longitude }, map, label: { text: bike.code, color: 'white', fontSize: '9px', fontWeight: '600' }, icon: { path: google.maps.SymbolPath.CIRCLE, scale: 0, fillOpacity: 0, strokeOpacity: 0 }, zIndex: 2 });
+        m.addListener('click', function() {
+          const msg = JSON.stringify({ type: 'bikeSelected', bike: { id: bike.id, code: bike.code, model: bike.model } });
+          if (window.ReactNativeWebView) { window.ReactNativeWebView.postMessage(msg); } else { window.parent.postMessage(msg, '*'); }
+        });
+      });
+      if (window.ReactNativeWebView) { window.ReactNativeWebView.postMessage(JSON.stringify({ type: 'mapReady' })); }
+    }
+  </script>
+  <script src="https://maps.googleapis.com/maps/api/js?key=${GOOGLE_MAPS_KEY}&callback=initMap" async defer></script>
+</body></html>` : '';
+
   return (
     <View style={styles.container}>
       <ReactNativeWebView
         ref={webViewRef}
-        source={{ html: mapHTML }}
+        source={{ html: mapProvider === 'google' && hasGoogleKey ? googleMapHTML : mapHTML }}
         style={styles.webview}
         javaScriptEnabled={true}
         domStorageEnabled={true}
@@ -931,6 +975,19 @@ export const OSMMap = forwardRef<OSMMapRef, OSMMapProps>(({
           // console.log('WebView loaded successfully');
         }}
       />
+
+      {/* Bouton toggle OSM / Google Maps */}
+      {hasGoogleKey && (
+        <TouchableOpacity
+          onPress={() => setMapProvider(p => p === 'osm' ? 'google' : 'osm')}
+          style={styles.mapToggleBtn}
+          activeOpacity={0.85}
+        >
+          <Text style={styles.mapToggleTxt}>
+            {mapProvider === 'osm' ? `🗺 ${t('map.switchToGoogle')}` : `🗺 ${t('map.switchToOSM')}`}
+          </Text>
+        </TouchableOpacity>
+      )}
     </View>
   );
 });
@@ -944,5 +1001,25 @@ const styles = StyleSheet.create({
   webview: {
     flex: 1,
     backgroundColor: 'transparent',
+  },
+  mapToggleBtn: {
+    position: 'absolute',
+    bottom: 16,
+    right: 16,
+    backgroundColor: 'white',
+    borderRadius: 8,
+    paddingHorizontal: 10,
+    paddingVertical: 6,
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.2,
+    shadowRadius: 3,
+    elevation: 4,
+    zIndex: 10,
+  },
+  mapToggleTxt: {
+    fontSize: 12,
+    fontWeight: '600',
+    color: '#374151',
   },
 });

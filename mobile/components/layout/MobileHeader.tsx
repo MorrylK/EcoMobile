@@ -1,5 +1,6 @@
 import { Logo } from '@/components/ui/Logo';
 import { Text } from '@/components/ui/Text';
+import { ActivePlanBanner } from '@/components/ui/ActivePlanBanner';
 import { useColorScheme } from '@/hooks/use-color-scheme';
 import { useInternet } from '@/hooks/useInternet';
 import { notificationService } from '@/services/notificationService';
@@ -222,6 +223,8 @@ export function MobileHeader({
         </View>
       </View>
 
+      <ActivePlanBanner />
+
       {!isConnected && (
         <View 
           style={{
@@ -232,7 +235,7 @@ export function MobileHeader({
           }}
         >
           <Text size="sm" color="white" weight="medium" style={{ textAlign: 'center' }}>
-            🔌 Pas de connexion Internet
+            Pas de connexion Internet
           </Text>
         </View>
       )}

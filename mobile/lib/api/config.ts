@@ -27,7 +27,7 @@ const getApiBaseUrl = () => {
   const envApiUrl = Constants.expoConfig?.extra?.apiUrl;
   
   // Priorité 3: URL par défaut depuis app.json
-  // const defaultUrl = 'http://10.237.67.130:10000/api/v1';
+  // const defaultUrl = 'http://10.237.68.65:10000/api/v1';
   const defaultUrl = 'https://env-freebike-xybronix.hidora.com/api/v1';
   
   // En développement, toujours utiliser l'URL de développement

@@ -543,6 +543,9 @@ const translations: Translations = {
   'profile.edit.fillRequiredFields': { fr: 'Veuillez remplir tous les champs obligatoires', en: 'Please fill in all required fields' },
   'profile.edit.updateSuccess': { fr: 'Profil mis à jour avec succès', en: 'Profile updated successfully' },
   'profile.edit.updateError': { fr: 'Erreur lors de la mise à jour du profil', en: 'Error updating profile' },
+  'profile.edit.documents': { fr: 'Mes documents', en: 'My Documents' },
+  'profile.edit.updateDocuments': { fr: 'Mettre à jour mes documents', en: 'Update my documents' },
+  'profile.edit.documentsHint': { fr: 'Pièce d\'identité, justificatif de domicile, selfie', en: 'ID card, proof of address, selfie' },
 
   // Security
   'security.title': { fr: 'Sécurité', en: 'Security' },
@@ -1107,6 +1110,31 @@ const translations: Translations = {
   // Document modification
   'document.modify': { fr: 'Modifier', en: 'Modify' },
   'document.modifyWarning': { fr: 'Votre document sera soumis à une nouvelle vérification.', en: 'Your document will be submitted for re-verification.' },
+
+  // Active Plan Banner
+  'banner.tapToView': { fr: 'Appuyez pour voir', en: 'Tap to view' },
+  'banner.durationRemaining': { fr: '{duration} restantes · exp. {date}', en: '{duration} remaining · exp. {date}' },
+  'banner.expired': { fr: 'Expiré', en: 'Expired' },
+  'banner.expiresTomorrow': { fr: 'Expire demain', en: 'Expires tomorrow' },
+  'banner.daysRemaining': { fr: '{days} jours restants · {date}', en: '{days} days remaining · {date}' },
+  'banner.freeDay': { fr: 'Jour gratuit', en: 'Free day' },
+  'banner.freeDayRemaining': { fr: '{days} jour restant · exp. {date}', en: '{days} day remaining · exp. {date}' },
+  'banner.freeDaysRemaining': { fr: '{days} jours restants · exp. {date}', en: '{days} days remaining · exp. {date}' },
+
+  // Map provider toggle
+  'map.switchToGoogle': { fr: 'Google Maps', en: 'Google Maps' },
+  'map.switchToOSM': { fr: 'Carte OSM', en: 'OSM Map' },
+
+  // Biometric Lock Screen
+  'biometricLock.title': { fr: 'Application verrouillée', en: 'App Locked' },
+  'biometricLock.subtitle': { fr: 'Déverrouillez pour continuer', en: 'Unlock to continue' },
+  'biometricLock.unlockButton': { fr: 'Déverrouiller', en: 'Unlock' },
+  'biometricLock.prompt': { fr: 'Déverrouillez pour accéder à l\'application', en: 'Unlock to access the app' },
+  'biometricLock.lockSetting': { fr: 'Verrouillage à la fermeture', en: 'Lock on close' },
+  'biometricLock.lockSettingDesc': { fr: 'Verrouille l\'app à chaque mise en arrière-plan', en: 'Locks the app when put in background' },
+
+  // Inspection star rating
+  'inspection.starInstruction': { fr: 'Évaluez chaque élément (1 étoile = hors service, 5 étoiles = parfait)', en: 'Rate each item (1 star = out of service, 5 stars = perfect)' },
 };
 
 interface MobileI18nContextType {

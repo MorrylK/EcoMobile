@@ -18,6 +18,7 @@ declare global {
 type BikeRequest = UnlockRequest | LockRequest;
 
 function ImageGallery({ images, title }: { images: string[], title: string }) {
+  const { t } = useTranslation();
   const [selectedImage, setSelectedImage] = useState<string | null>(null);
   const [zoom, setZoom] = useState(1);
   
@@ -70,7 +71,7 @@ function ImageGallery({ images, title }: { images: string[], title: string }) {
   return (
     <div className="space-y-4">
       <div className="flex justify-between items-center">
-        <h4 className="font-medium">{t('bikeActions.inspectionPhotos', { count: images.length }) || `Photos d'inspection (${images.length})`}</h4>
+        <h4 className="font-medium">{t('bikeActions.inspectionPhotos') || `Photos d'inspection (${images.length})`}</h4>
         {selectedImage && (
           <div className="flex gap-2">
             <Button variant="outline" size="sm" onClick={handleZoomOut}>
@@ -369,7 +370,7 @@ export function BikeActionManagement() {
           }`}
         >
           <Unlock className="w-4 h-4" />
-          {t('bikeActions.unlocks', { count: stats.pendingUnlock }) || `Déverrouillages (${stats.pendingUnlock})`}
+          {t('bikeActions.unlocks', { count: stats.pendingUnlock })}
         </button>
         <button
           onClick={() => setActiveTab('lock')}
@@ -380,7 +381,7 @@ export function BikeActionManagement() {
           }`}
         >
           <Lock className="w-4 h-4" />
-          {t('bikeActions.locks', { count: stats.pendingLock }) || `Verrouillages (${stats.pendingLock})`}
+          {t('bikeActions.locks', { count: stats.pendingLock })}
         </button>
       </div>
 
@@ -700,32 +701,29 @@ export function BikeActionManagement() {
                   )}
                 </div>
 
-                {/* Évaluation par élément (scores sliders) */}
+                {/* Évaluation par élément (étoiles) */}
                 {(() => {
-                  const scores = inspectionModal.request.metadata?.inspection?.itemScores as
+                  const scores = (inspectionModal.request.metadata?.inspection as any)?.itemScores as
                     | { id: string; label: string; value: number; state: 'good' | 'degraded' | 'bad' }[]
                     | undefined;
-                  if (!scores || scores.length === 0) return null;
+                  if (!scores || !Array.isArray(scores) || scores.length === 0) return null;
                   return (
                     <div className="mb-4">
                       <p className="text-sm font-medium text-gray-500 mb-2">Évaluation par élément</p>
                       <div className="grid grid-cols-1 gap-2">
                         {scores.map((item) => {
                           const pct = item.value ?? 0;
-                          const color = pct <= 30 ? '#ef4444' : pct <= 69 ? '#f59e0b' : '#16a34a';
-                          const stateLabel = pct <= 30 ? 'Mauvais' : pct <= 69 ? 'Dégradé' : 'Bon';
+                          const stars = Math.round(pct / 20); // % → étoiles (1-5)
+                          const color = pct <= 40 ? '#ef4444' : pct <= 60 ? '#f59e0b' : '#16a34a';
+                          const stateLabel = pct <= 40 ? 'Mauvais' : pct <= 60 ? 'Dégradé' : 'Bon';
                           return (
                             <div key={item.id} className="flex items-center gap-3">
                               <span className="text-xs text-gray-600 w-32 shrink-0">{item.label}</span>
-                              <div className="flex-1 bg-gray-200 rounded-full h-2">
-                                <div
-                                  className="h-2 rounded-full transition-all"
-                                  style={{ width: `${pct}%`, backgroundColor: color }}
-                                />
+                              <div className="flex items-center gap-0.5">
+                                {[1, 2, 3, 4, 5].map((s) => (
+                                  <span key={s} style={{ color: s <= stars ? '#f59e0b' : '#d1d5db', fontSize: 16 }}>★</span>
+                                ))}
                               </div>
-                              <span className="text-xs font-semibold w-8 text-right" style={{ color }}>
-                                {pct}%
-                              </span>
                               <span className="text-xs w-14" style={{ color }}>{stateLabel}</span>
                             </div>
                           );

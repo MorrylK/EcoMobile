@@ -416,7 +416,7 @@ export class AdminController {
    */
   async getPricing(req: AuthRequest, res: express.Response) {
     try {
-      const pricing = await prisma.pricingConfig.findFirst({
+      let pricing = await prisma.pricingConfig.findFirst({
         where: { isActive: true },
         include: {
           plans: {
@@ -474,15 +474,16 @@ export class AdminController {
         req
       );
 
+      if (!pricing) {
+        pricing = await prisma.pricingConfig.create({
+          data: { unlockFee: 100, baseHourlyRate: 200, isActive: true },
+          include: { plans: true, rules: true, promotions: true }
+        }) as any;
+      }
+
       res.json({
         success: true,
-        data: pricing || {
-          unlockFee: 100,
-          baseHourlyRate: 200,
-          plans: [],
-          rules: [],
-          promotions: []
-        }
+        data: pricing
       });
     } catch (error: any) {
       res.status(500).json({
@@ -541,8 +542,8 @@ export class AdminController {
         // Create new pricing config if none exists
         pricingConfig = await prisma.pricingConfig.create({
           data: {
-            unlockFee: unlockFee || 100,
-            baseHourlyRate: baseHourlyRate || 200,
+            unlockFee: unlockFee ?? 100,
+            baseHourlyRate: baseHourlyRate ?? 200,
             isActive: true
           },
           include: { 

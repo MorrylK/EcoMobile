@@ -16,7 +16,7 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from '../../ui/tabs';
 import { userService, type User as UserType } from '../../../services/api/user.service';
 import { type Ride } from '../../../services/api/ride.service';
 import { type Transaction } from '../../../services/api/wallet.service';
-import { type Incident } from '../../../services/api/incident.service';
+import { incidentService, type Incident } from '../../../services/api/incident.service';
 import { documentService, type DocumentsStatus, type IdentityDocument, type ResidenceProof, type ActivityLocationProof } from '../../../services/api/document.service';
 
 export function UserDetails() {
@@ -32,6 +32,7 @@ export function UserDetails() {
     _transactions?: Transaction[];
     _requests?: any[];
     stats?: any;
+    depositExemptionUntil?: string;
   } | null>(null);
   const [loading, setLoading] = useState(true);
   const [actionLoading, setActionLoading] = useState(false);
@@ -1055,7 +1056,7 @@ export function UserDetails() {
                             variant="outline"
                             size="sm"
                             onClick={() => {
-                              const baseUrl = (import.meta.env.VITE_API_URL || 'http://localhost:5000/api/v1').replace('/api/v1', '');
+                              const baseUrl = ((import.meta as any).env.VITE_API_URL).replace('/api/v1', '');
                               window.open(`${baseUrl}${doc.frontImage}`, '_blank');
                             }}
                           >
@@ -1067,7 +1068,7 @@ export function UserDetails() {
                               variant="outline"
                               size="sm"
                               onClick={() => {
-                                const baseUrl = (import.meta.env.VITE_API_URL || 'http://localhost:5000/api/v1').replace('/api/v1', '');
+                                const baseUrl = ((import.meta as any).env.VITE_API_URL).replace('/api/v1', '');
                                 window.open(`${baseUrl}${doc.backImage}`, '_blank');
                               }}
                             >
@@ -1080,7 +1081,7 @@ export function UserDetails() {
                               variant="outline"
                               size="sm"
                               onClick={() => {
-                                const baseUrl = (import.meta.env.VITE_API_URL || 'http://localhost:5000/api/v1').replace('/api/v1', '');
+                                const baseUrl = ((import.meta as any).env.VITE_API_URL).replace('/api/v1', '');
                                 window.open(`${baseUrl}${doc.selfieImage}`, '_blank');
                               }}
                             >
@@ -1193,7 +1194,7 @@ export function UserDetails() {
                           variant="outline"
                           size="sm"
                           onClick={() => {
-                            const baseUrl = (import.meta.env.VITE_API_URL || 'http://localhost:5000/api/v1').replace('/api/v1', '');
+                            const baseUrl = (((import.meta as any).env.VITE_API_URL)).replace('/api/v1', '');
                             window.open(`${baseUrl}${documentsStatus.residenceProof?.documentFile}`, '_blank');
                           }}
                         >
@@ -1305,7 +1306,7 @@ export function UserDetails() {
                           variant="outline"
                           size="sm"
                           onClick={() => {
-                            const baseUrl = (import.meta.env.VITE_API_URL || 'http://localhost:5000/api/v1').replace('/api/v1', '');
+                            const baseUrl = (((import.meta as any).env.VITE_API_URL)).replace('/api/v1', '');
                             window.open(`${baseUrl}${documentsStatus.activityLocationProof?.documentFile}`, '_blank');
                           }}
                         >

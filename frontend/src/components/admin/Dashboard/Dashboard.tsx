@@ -1,6 +1,5 @@
 import { Bike, Users, DollarSign, AlertTriangle, Activity, TrendingUp, MapPin, Battery, Loader2 } from 'lucide-react';
 import { Card } from '../../ui/card';
-import { DashboardMap } from './DashboardMap';
 import { BikeMap } from '../Bikes/BikeMap';
 import { Badge } from '../../ui/badge';
 import { useTranslation } from '../../../lib/i18n';
@@ -26,12 +25,9 @@ export function Dashboard() {
     try {
       setIsLoading(true);
       
-      // OPTIMISATION: Utiliser l'endpoint groupé pour récupérer toutes les données en une seule requête
-      // Au lieu de 4 requêtes séparées, on fait 1 seule requête
       try {
         const completeData = await adminService.getDashboardComplete();
         
-        // Adapter la structure pour correspondre à l'interface DashboardStats attendue
         setDashboardData({
           totalUsers: completeData.stats.users.total,
           totalBikes: completeData.stats.bikes.total,
@@ -41,7 +37,7 @@ export function Dashboard() {
           availableBikes: completeData.stats.bikes.byStatus.AVAILABLE || 0,
           activeRides: completeData.stats.rides.active,
           ongoingRides: completeData.stats.rides.active,
-          revenueToday: 0, // Calculé séparément si nécessaire
+          revenueToday: 0,
           userGrowth: 0,
           bikeUtilization: 0,
           avgTripDuration: 0,
@@ -59,7 +55,6 @@ export function Dashboard() {
         setRecentTrips(completeData.recentTrips || []);
         setRecentIncidents(completeData.recentIncidents || []);
       } catch (error) {
-        // Fallback vers l'ancienne méthode si l'endpoint groupé n'est pas disponible
         console.warn('Dashboard complete endpoint not available, using fallback');
         const [dashboardResponse, tripsResponse, incidentsResponse, realtimePositions] = await Promise.all([
           adminService.getDashboardStats(),

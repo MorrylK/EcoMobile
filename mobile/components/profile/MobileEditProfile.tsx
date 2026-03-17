@@ -1,3 +1,4 @@
+/* eslint-disable @typescript-eslint/no-unused-vars */
 import { Button } from '@/components/ui/Button';
 import { Input } from '@/components/ui/Input';
 import { PhoneInput } from '@/components/ui/PhoneInput';
@@ -158,7 +159,7 @@ export default function MobileEditProfile({ onNavigate }: MobileEditProfileProps
         body: JSON.stringify({ base64: dataUri }),
       });
 
-      const uploadResult = await uploadResponse.json();
+      const uploadResult = await uploadResponse.json() as { success: boolean; data: { url: string } };
       if (!uploadResult.success) throw new Error('upload_failed');
 
       const avatarUrl: string = uploadResult.data.url;

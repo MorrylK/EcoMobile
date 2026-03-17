@@ -4,7 +4,7 @@ import { Card } from '@/components/ui/Card';
 import { Text } from '@/components/ui/Text';
 import { Textarea } from '@/components/ui/Textarea';
 import { toast } from '@/components/ui/Toast';
-import { HorizontalSlider } from '@/components/ui/HorizontalSlider';
+import { StarRating } from '@/components/ui/StarRating';
 import { useColorScheme } from '@/hooks/use-color-scheme';
 import { getGlobalStyles } from '@/styles/globalStyles';
 import { haptics } from '@/utils/haptics';
@@ -49,7 +49,7 @@ interface InspectionData {
 interface InspectionItem {
   id: string;
   label: { fr: string; en: string };
-  value: number | null;   // 0-100 % ; null = non évalué
+  value: number | null;   // 1-5 étoiles ; null = non évalué
   required: false;        // rien n'est obligatoire
 }
 
@@ -306,28 +306,25 @@ export function MobileBikeInspection({ bikeId, bikeName, inspectionType, bikeEqu
     setIsSubmitting(true);
 
     try {
-      // Éléments évalués
+      // Éléments évalués (stars 1-5)
       const evaluated = inspectionItems.filter(item => item.value !== null);
-      // Éléments en mauvais état (≤ 30%)
-      const badItems = evaluated.filter(item => (item.value ?? 100) <= 30);
-      // Éléments dégradés (31-69%)
-      const degradedItems = evaluated.filter(item => {
-        const v = item.value ?? 100;
-        return v > 30 && v <= 69;
-      });
+      // Éléments en mauvais état (≤ 2 étoiles)
+      const badItems = evaluated.filter(item => (item.value ?? 5) <= 2);
+      // Éléments dégradés (3 étoiles)
+      const degradedItems = evaluated.filter(item => (item.value ?? 5) === 3);
 
       const hasIssues = badItems.length > 0 || degradedItems.length > 0;
       const hasCriticalIssues = badItems.length > 0;
       const overallCondition = hasCriticalIssues ? 'damaged' : hasIssues ? 'acceptable' : 'good';
 
-      // Construire la liste des éléments avec leur score pour l'admin
+      // Construire la liste des éléments pour l'admin (valeur convertie en %)
       const itemScores = inspectionItems
         .filter(item => item.value !== null)
         .map(item => ({
           id: item.id,
           label: item.label[language],
-          value: item.value,
-          state: (item.value ?? 100) <= 30 ? 'bad' : (item.value ?? 100) <= 69 ? 'degraded' : 'good',
+          value: (item.value ?? 0) * 20,   // étoiles → %
+          state: (item.value ?? 5) <= 2 ? 'bad' : (item.value ?? 5) === 3 ? 'degraded' : 'good',
         }));
 
       const allIssues = [...badItems, ...degradedItems].map(item => item.label[language]);
@@ -371,15 +368,12 @@ export function MobileBikeInspection({ bikeId, bikeName, inspectionType, bikeEqu
     }
   };
 
-  const requiredItems = inspectionItems.slice(0, 9);  // les 9 éléments principaux
-  const optionalItems = inspectionItems.slice(9);
-
   const evaluatedCount = inspectionItems.filter(item => item.value !== null).length;
   const totalCount = inspectionItems.length;
   const allInspected = evaluatedCount === totalCount;
   
-  const badItems = inspectionItems.filter(item => item.value !== null && item.value <= 30);
-  const hasAnyIssues = badItems.length > 0 || inspectionItems.some(item => item.value !== null && item.value <= 69 && item.value > 30);
+  const badItems = inspectionItems.filter(item => item.value !== null && item.value <= 2);
+  const hasAnyIssues = badItems.length > 0 || inspectionItems.some(item => item.value !== null && item.value === 3);
 
   // Fonction pour cacher le clavier
   const dismissKeyboard = () => {
@@ -475,7 +469,7 @@ export function MobileBikeInspection({ bikeId, bikeName, inspectionType, bikeEqu
                 {/* Boutons Tout OK / Tout NOK */}
                 <View style={[styles.row, styles.gap8]}>
                   <TouchableOpacity
-                    onPress={() => setAllItems(100)}
+                    onPress={() => setAllItems(5)}
                     style={{
                       flexDirection: 'row', alignItems: 'center', gap: 4,
                       paddingHorizontal: 8, paddingVertical: 4,
@@ -486,7 +480,7 @@ export function MobileBikeInspection({ bikeId, bikeName, inspectionType, bikeEqu
                     <Text size="xs" style={{ color: '#15803d', fontWeight: '600' }}>{t('inspection.allOk')}</Text>
                   </TouchableOpacity>
                   <TouchableOpacity
-                    onPress={() => setAllItems(0)}
+                    onPress={() => setAllItems(1)}
                     style={{
                       flexDirection: 'row', alignItems: 'center', gap: 4,
                       paddingHorizontal: 8, paddingVertical: 4,
@@ -503,15 +497,18 @@ export function MobileBikeInspection({ bikeId, bikeName, inspectionType, bikeEqu
                 {t('inspection.sliderInstruction')}
               </Text>
 
-              {/* Grille de sliders horizontaux */}
+              {/* Grille de notation par étoiles */}
               <View style={{ width: '100%' }}>
                 {inspectionItems.map((item) => (
-                  <View key={item.id} style={{ marginBottom: 16 }}>
-                    <HorizontalSlider
-                      label={item.label[language]}
+                  <View key={item.id} style={{ marginBottom: 14, flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between' }}>
+                    <Text size="sm" color={colorScheme === 'light' ? '#374151' : '#d1d5db'} style={{ flex: 1, marginRight: 8 }}>
+                      {item.label[language]}
+                    </Text>
+                    <StarRating
                       value={item.value}
                       onChange={(v) => updateInspectionItem(item.id, v)}
                       colorScheme={colorScheme}
+                      size={24}
                     />
                   </View>
                 ))}

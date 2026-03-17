@@ -164,7 +164,8 @@ class PricingTierService {
     _endTime: Date
   ): Promise<CostCalculation> {
     const pricingConfig = await prisma.pricingConfig.findFirst({ where: { isActive: true } });
-    const fallbackHourlyRate = pricingConfig?.baseHourlyRate ?? 200;
+    if (!pricingConfig) throw new Error('Aucune configuration tarifaire active trouvée');
+    const fallbackHourlyRate = pricingConfig.baseHourlyRate;
 
     const allTiers = await prisma.pricingTier.findMany({ where: { isActive: true } });
 
@@ -303,7 +304,8 @@ class PricingTierService {
   async getDisplayPrice(): Promise<{ price: number; durationHours: number; isNight: boolean; fallback: boolean }> {
     const currentHour = new Date().getHours();
     const pricingConfig = await prisma.pricingConfig.findFirst({ where: { isActive: true } });
-    const fallbackHourlyRate = pricingConfig?.baseHourlyRate ?? 200;
+    if (!pricingConfig) throw new Error('Aucune configuration tarifaire active trouvée');
+    const fallbackHourlyRate = pricingConfig.baseHourlyRate;
 
     const activeTiers = await prisma.pricingTier.findMany({ where: { isActive: true } });
     const applicable = activeTiers.filter(t => this.tierAppliesAtHour(t, currentHour));

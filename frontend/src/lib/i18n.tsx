@@ -62,6 +62,8 @@ const translations: Translations = {
 
   // Bike actions (déverrouillage / verrouillage)
   'bikeActions.management': { fr: 'Gestion des Actions Vélos', en: 'Bike Action Management' },
+  'bikeActions.approve': { fr: 'Approuver', en: 'Approve' },
+  'bikeActions.reject': { fr: 'Rejeter', en: 'Reject' },
   'bikeActions.pendingUnlocks': { fr: 'Déverrouillages en attente', en: 'Pending unlocks' },
   'bikeActions.pendingLocks': { fr: 'Verrouillages en attente', en: 'Pending locks' },
   'bikeActions.todayActions': { fr: 'Actions aujourd\'hui', en: 'Actions today' },

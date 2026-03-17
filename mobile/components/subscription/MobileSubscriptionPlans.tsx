@@ -9,7 +9,7 @@ import { subscriptionService, SubscriptionPackage, SubscriptionFormula, ActiveSu
 import { walletService } from '@/services/walletService';
 import { getGlobalStyles } from '@/styles/globalStyles';
 import { haptics } from '@/utils/haptics';
-import { Check, CreditCard, Star, X, Clock, Moon, Sun, Wallet } from 'lucide-react-native';
+import { Check, CreditCard, Star, X, Wallet } from 'lucide-react-native';
 import React, { useEffect, useState } from 'react';
 import { ScrollView, TouchableOpacity, View, Alert, Modal } from 'react-native';
 import { useMobileI18n } from '@/lib/mobile-i18n';
@@ -218,7 +218,9 @@ export function MobileSubscriptionPlans({ onBack, onNavigate }: MobileSubscripti
 
         {/* Current Subscription */}
         {currentSubscription && (() => {
-          const totalDays = currentSubscription.totalDays || currentSubscription.remainingDays;
+          const startDate = new Date(currentSubscription.startDate);
+          const endDate = new Date(currentSubscription.endDate);
+          const totalDays = Math.ceil((endDate.getTime() - startDate.getTime()) / (1000 * 60 * 60 * 24));
           const progressPercent = totalDays > 0 ? Math.min((currentSubscription.remainingDays / totalDays) * 100, 100) : 0;
           return (
             <Card style={[styles.p16, { backgroundColor: '#dbeafe', borderColor: '#0284c7', borderWidth: 1 }]}>

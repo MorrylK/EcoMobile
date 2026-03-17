@@ -2,6 +2,7 @@ import { prisma } from '../config/prisma';
 import { RequestStatus, BikeStatus } from '@prisma/client';
 import NotificationService from './NotificationService';
 import { imageService } from './ImageService';
+import PricingTierService from './PricingTierService';
 
 export class BikeRequestService {
   private notificationService: NotificationService;
@@ -502,16 +503,18 @@ export class BikeRequestService {
     userId: string,
     duration: number,
     startTime: Date,
-    ridePlan: any
+    _ridePlan: any
   ) {
-    const hourlyRate = ridePlan?.hourlyRate || 200;
-    const durationHours = duration / 60;
-    const roundedHours = Math.ceil(durationHours);
-    const originalCost = roundedHours * hourlyRate;
+    const endTime = new Date(startTime.getTime() + duration * 60000);
+    const roundedHours = Math.ceil(duration / 60);
+
+    // Coût de base via PricingTierService (même logique que RideService.endRide)
+    const calc = await PricingTierService.calculateRideCost(duration, startTime, endTime);
+    const originalCost = calc.totalCost;
 
     let finalCost = originalCost;
     let discountApplied = 0;
-    let appliedRule = 'Tarif normal';
+    let appliedRule = 'Tarification sans forfait (paliers)';
     let paymentMethod = 'WALLET';
     let isOvertime = false;
     let hasActiveSubscription = false;
@@ -522,10 +525,10 @@ export class BikeRequestService {
     if (activeSubscription) {
       hasActiveSubscription = true;
       isOvertime = await this.checkIfOvertime(startTime, activeSubscription.packageType, activeSubscription?.planId || undefined);
-      
+
       if (isOvertime) {
         const overrideRule = activeSubscription.planId ? await this.getOverrideRule(activeSubscription.planId) : null;
-        
+
         if (overrideRule) {
           if (overrideRule.overTimeType === 'FIXED_PRICE') {
             finalCost = overrideRule.overTimeValue;
@@ -535,6 +538,8 @@ export class BikeRequestService {
             finalCost = Math.max(0, originalCost - reduction);
             discountApplied = reduction;
             appliedRule = `Réduction overtime: ${overrideRule.overTimeValue}%`;
+          } else {
+            finalCost = originalCost;
           }
         } else {
           const reduction = Math.round(originalCost * 0.3);

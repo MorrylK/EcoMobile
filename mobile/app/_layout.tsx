@@ -14,6 +14,8 @@ import { Colors } from '@/constants/theme';
 import { InternetStatusBar } from '@/components/ui/InternetStatusBar';
 import { ToastContainer } from '@/components/ui/ToastContainer';
 import { UpdateChecker } from '@/components/ui/UpdateChecker';
+import { BiometricLockScreen } from '@/components/ui/BiometricLockScreen';
+import { useBiometricLock } from '@/hooks/useBiometricLock';
 import "@/global.css";
 
 const CustomLightTheme = {
@@ -44,8 +46,30 @@ const CustomDarkTheme = {
 
 SplashScreen.preventAutoHideAsync();
 
-export default function RootLayout() {
+function AppContent() {
   const colorScheme = useColorScheme();
+  const { isLocked, isReady, unlock } = useBiometricLock();
+
+  return (
+    <ThemeProvider value={colorScheme === 'dark' ? CustomDarkTheme : CustomLightTheme}>
+      <View style={{ flex: 1 }}>
+        <InternetStatusBar showInAllScreens={true} position="top" />
+        <Stack screenOptions={{ headerShown: false }}>
+          <Stack.Screen name="index" options={{ headerShown: false }} />
+          <Stack.Screen name="(auth)" options={{ headerShown: false }} />
+          <Stack.Screen name="(tabs)" options={{ headerShown: false }} />
+          <Stack.Screen name="(modals)" options={{ headerShown: false, presentation: 'modal' }} />
+        </Stack>
+        <StatusBar style={colorScheme === 'dark' ? 'light' : 'dark'} />
+        <ToastContainer />
+        <UpdateChecker />
+        {isReady && isLocked && <BiometricLockScreen onUnlock={unlock} />}
+      </View>
+    </ThemeProvider>
+  );
+}
+
+export default function RootLayout() {
   const [loaded] = useFonts({
     'Aptos': require('../assets/fonts/Aptos.ttf'),
     'Aptos-Display': require('../assets/fonts/Aptos-Display.ttf'),
@@ -66,20 +90,7 @@ export default function RootLayout() {
   return (
     <MobileI18nProvider>
       <MobileAuthProvider>
-        <ThemeProvider value={colorScheme === 'dark' ? CustomDarkTheme : CustomLightTheme}>
-          <View style={{ flex: 1 }}>
-            <InternetStatusBar showInAllScreens={true} position="top" />
-            <Stack screenOptions={{ headerShown: false }}>
-              <Stack.Screen name="index" options={{ headerShown: false }} />
-              <Stack.Screen name="(auth)" options={{ headerShown: false }} />
-              <Stack.Screen name="(tabs)" options={{ headerShown: false }} />
-              <Stack.Screen name="(modals)" options={{ headerShown: false, presentation: 'modal' }} />
-            </Stack>
-            <StatusBar style={colorScheme === 'dark' ? 'light' : 'dark'} />
-            <ToastContainer />
-            <UpdateChecker />
-          </View>
-        </ThemeProvider>
+        <AppContent />
       </MobileAuthProvider>
     </MobileI18nProvider>
   );

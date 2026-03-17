@@ -1,4 +1,3 @@
-/* eslint-disable @typescript-eslint/no-unused-vars */
 /* eslint-disable react-hooks/exhaustive-deps */
 import { Text } from '@/components/ui/Text';
 import { useColorScheme } from '@/hooks/use-color-scheme';
@@ -7,7 +6,7 @@ import { haptics } from '@/utils/haptics';
 import { ArrowLeft, Info, Paperclip, Send } from 'lucide-react-native';
 import * as ImagePicker from 'expo-image-picker';
 import React, { useEffect, useRef, useState } from 'react';
-import { ScrollView, TouchableOpacity, View, RefreshControl, Keyboard, TouchableWithoutFeedback, Animated, Dimensions, TextInput, TextInputContentSizeChangeEventData, NativeSyntheticEvent, Alert, Image } from 'react-native';
+import { ScrollView, TouchableOpacity, View, RefreshControl, Keyboard, TouchableWithoutFeedback, Animated, TextInput, TextInputContentSizeChangeEventData, NativeSyntheticEvent, Alert, Image } from 'react-native';
 import { useMobileAuth } from '@/lib/mobile-auth';
 import { useMobileI18n } from '@/lib/mobile-i18n';
 import { chatService, ChatMessage } from '@/services/chatService';
@@ -24,15 +23,12 @@ export function MobileChat({ onNavigate }: MobileChatProps) {
   const [messages, setMessages] = useState<ChatMessage[]>([]);
   const [newMessage, setNewMessage] = useState('');
   const [isTyping, setIsTyping] = useState(false);
-  const [showInfoDialog, setShowInfoDialog] = useState(false);
   const [isLoading, setIsLoading] = useState(false);
   const [isSending, setIsSending] = useState(false);
   const scrollViewRef = useRef<ScrollView>(null);
   const inputRef = useRef<TextInput>(null);
   const inputContainerAnim = useRef(new Animated.Value(0)).current;
   const [inputHeight, setInputHeight] = useState(40);
-
-  const { height: screenHeight } = Dimensions.get('window');
 
   useEffect(() => {
     loadMessages();
@@ -242,7 +238,6 @@ export function MobileChat({ onNavigate }: MobileChatProps) {
           style={[styles.p8, styles.rounded8]}
           onPress={() => {
             haptics.light();
-            setShowInfoDialog(true);
           }}
         >
           <Info size={20} color={colorScheme === 'light' ? '#111827' : '#f9fafb'} />

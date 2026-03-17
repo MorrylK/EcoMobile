@@ -1,12 +1,16 @@
 import React, { useState, useEffect, useRef } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
-import { ArrowLeft, MapPin, RefreshCw, Zap, Signal, AlertTriangle, Eye, EyeOff } from 'lucide-react';
+import { ArrowLeft, MapPin, RefreshCw, Zap, Signal, AlertTriangle, Eye, EyeOff, Map } from 'lucide-react';
 import { Button } from '../../ui/button';
 import { Card } from '../../ui/card';
 import { bikeService } from '../../../services/api/bike.service';
 import { toast } from 'sonner';
 import L from 'leaflet';
 import 'leaflet/dist/leaflet.css';
+import { GoogleMap, Marker, InfoWindow, useJsApiLoader } from '@react-google-maps/api';
+
+const GOOGLE_MAPS_KEY = ((import.meta as any).env).VITE_GOOGLE_MAPS_API_KEY as string | undefined;
+const hasGoogleKey = !!GOOGLE_MAPS_KEY;
 
 interface BikeMarker {
   id: string;
@@ -53,6 +57,13 @@ export function BikeMap() {
   const [showOffline, setShowOffline] = useState(true);
   const [apiError, setApiError] = useState<string | null>(null);
   const [mapReady, setMapReady] = useState(false);
+  const [mapProvider, setMapProvider] = useState<'osm' | 'google'>('osm');
+  const [selectedGMarker, setSelectedGMarker] = useState<BikeMarker | null>(null);
+
+  const { isLoaded: isGoogleLoaded } = useJsApiLoader({
+    googleMapsApiKey: GOOGLE_MAPS_KEY ?? '',
+    id: 'google-map-script',
+  });
 
   // Coordonnées par défaut (Douala, Cameroun)
   const defaultCenter: [number, number] = [4.0511, 9.7679];
@@ -317,59 +328,71 @@ export function BikeMap() {
       const showOfflineDot = !bike.isOnline && bike.isActive !== false;
 
       const markerHtml = `
-        <div style="position: relative; width: 32px; height: 32px; cursor: pointer;">
-          <div style="
-            width: 32px;
-            height: 32px;
-            background-color: ${markerColor};
-            border-radius: 50%;
-            border: 3px solid white;
-            box-shadow: 0 2px 8px rgba(0,0,0,0.3);
-            display: flex;
-            align-items: center;
-            justify-content: center;
-            color: white;
-            font-size: 14px;
-            font-weight: bold;
-            transition: transform 0.2s;
-          ">
-            ${bike.isOnline ? '●' : '○'}
+        <div style="display:flex;flex-direction:column;align-items:center;gap:3px;cursor:pointer;">
+          <div style="position:relative;width:32px;height:32px;">
+            <div style="
+              width: 32px;
+              height: 32px;
+              background-color: ${markerColor};
+              border-radius: 50%;
+              border: 3px solid white;
+              box-shadow: 0 2px 8px rgba(0,0,0,0.3);
+              display: flex;
+              align-items: center;
+              justify-content: center;
+              color: white;
+              font-size: 14px;
+              font-weight: bold;
+              transition: transform 0.2s;
+            ">
+              ${bike.isOnline ? '●' : '○'}
+            </div>
+            ${showInactiveDot ? `
+              <div style="
+                position: absolute;
+                top: -2px;
+                right: -2px;
+                width: 12px;
+                height: 12px;
+                background-color: #ef4444;
+                border-radius: 50%;
+                border: 2px solid white;
+                box-shadow: 0 2px 4px rgba(0,0,0,0.2);
+              "></div>
+            ` : ''}
+            ${showOfflineDot ? `
+              <div style="
+                position: absolute;
+                top: -2px;
+                left: -2px;
+                width: 12px;
+                height: 12px;
+                background-color: #6b7280;
+                border-radius: 50%;
+                border: 2px solid white;
+                box-shadow: 0 2px 4px rgba(0,0,0,0.2);
+              "></div>
+            ` : ''}
           </div>
-          ${showInactiveDot ? `
-            <div style="
-              position: absolute;
-              top: -2px;
-              right: -2px;
-              width: 12px;
-              height: 12px;
-              background-color: #ef4444;
-              border-radius: 50%;
-              border: 2px solid white;
-              box-shadow: 0 2px 4px rgba(0,0,0,0.2);
-            "></div>
-          ` : ''}
-          ${showOfflineDot ? `
-            <div style="
-              position: absolute;
-              top: -2px;
-              left: -2px;
-              width: 12px;
-              height: 12px;
-              background-color: #6b7280;
-              border-radius: 50%;
-              border: 2px solid white;
-              box-shadow: 0 2px 4px rgba(0,0,0,0.2);
-            "></div>
-          ` : ''}
+          <div style="
+            background: rgba(0,0,0,0.72);
+            color: white;
+            font-size: 9px;
+            font-weight: 600;
+            padding: 1px 5px;
+            border-radius: 4px;
+            white-space: nowrap;
+            letter-spacing: 0.3px;
+          ">${bike.code}</div>
         </div>
       `;
 
       const customIcon = L.divIcon({
         html: markerHtml,
         className: 'custom-bike-marker',
-        iconSize: [32, 32],
-        iconAnchor: [16, 16],
-        popupAnchor: [0, -16]
+        iconSize: [46, 50],
+        iconAnchor: [23, 34],
+        popupAnchor: [0, -34]
       });
 
       const marker = L.marker([bike.latitude, bike.longitude], { 
@@ -523,8 +546,8 @@ export function BikeMap() {
             Hors ligne ({offlineBikes.length})
           </Button>
 
-          <Button 
-            onClick={refreshPositions} 
+          <Button
+            onClick={refreshPositions}
             disabled={isRefreshing}
             size="sm"
             className="flex items-center gap-2"
@@ -532,6 +555,18 @@ export function BikeMap() {
             <RefreshCw className={`w-4 h-4 ${isRefreshing ? 'animate-spin' : ''}`} />
             {isRefreshing ? 'Sync...' : 'Actualiser'}
           </Button>
+
+          {hasGoogleKey && (
+            <Button
+              variant="outline"
+              size="sm"
+              onClick={() => setMapProvider(p => p === 'osm' ? 'google' : 'osm')}
+              className="flex items-center gap-2"
+            >
+              <Map className="w-4 h-4" />
+              {mapProvider === 'osm' ? 'Google Maps' : 'OpenStreetMap'}
+            </Button>
+          )}
         </div>
       </div>
 
@@ -600,22 +635,77 @@ export function BikeMap() {
 
       {/* Carte */}
       <Card className="relative overflow-hidden" style={{ height: '70vh', minHeight: '600px' }}>
-        {/* Conteneur de la carte avec styles inline pour garantir l'affichage */}
+        {/* Conteneur OSM (Leaflet) — masqué quand Google Maps actif */}
         <div
           ref={mapContainerRef}
           style={{
             width: '100%',
             height: '100%',
-            position: 'relative',
-            zIndex: 1,
+            position: 'absolute',
+            top: 0, left: 0,
+            zIndex: mapProvider === 'osm' ? 1 : -1,
+            visibility: mapProvider === 'osm' ? 'visible' : 'hidden',
             backgroundColor: '#f0f0f0',
             borderRadius: '8px',
             overflow: 'hidden'
           }}
         />
-        
-        {/* Indicateur de chargement de la carte */}
-        {!mapReady && (
+
+        {/* Google Maps */}
+        {mapProvider === 'google' && isGoogleLoaded && (
+          <GoogleMap
+            mapContainerStyle={{ width: '100%', height: '100%', borderRadius: '8px' }}
+            center={{ lat: defaultCenter[0], lng: defaultCenter[1] }}
+            zoom={12}
+          >
+            {bikesWithGps.map(bike => {
+              const mc = getMarkerColor(bike);
+              return (
+                <Marker
+                  key={bike.id}
+                  position={{ lat: bike.latitude!, lng: bike.longitude! }}
+                  label={{ text: bike.code, color: 'white', fontSize: '10px', fontWeight: 'bold' }}
+                  icon={{
+                    path: (window as any).google?.maps?.SymbolPath?.CIRCLE ?? 0,
+                    scale: 12,
+                    fillColor: mc,
+                    fillOpacity: 1,
+                    strokeColor: 'white',
+                    strokeWeight: 2,
+                  }}
+                  onClick={() => setSelectedGMarker(bike)}
+                />
+              );
+            })}
+            {selectedGMarker && (
+              <InfoWindow
+                position={{ lat: selectedGMarker.latitude!, lng: selectedGMarker.longitude! }}
+                onCloseClick={() => setSelectedGMarker(null)}
+              >
+                <div style={{ minWidth: 180, fontSize: 13 }}>
+                  <div style={{ fontWeight: 700, marginBottom: 4 }}>🚲 {selectedGMarker.code}</div>
+                  <div style={{ color: '#6b7280', marginBottom: 8 }}>{selectedGMarker.model}</div>
+                  <div>⚡ Batterie : <strong>{selectedGMarker.battery}%</strong></div>
+                  <div>📍 {selectedGMarker.locationName || '—'}</div>
+                  <div style={{ marginTop: 8 }}>
+                    <a href={`/admin/bikes/${selectedGMarker.id}`} style={{ color: '#16a34a', fontWeight: 600 }}>Voir les détails →</a>
+                  </div>
+                </div>
+              </InfoWindow>
+            )}
+          </GoogleMap>
+        )}
+        {mapProvider === 'google' && !isGoogleLoaded && (
+          <div className="absolute inset-0 flex items-center justify-center bg-gray-50 z-20">
+            <div className="text-center">
+              <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-green-600 mx-auto mb-4" />
+              <p className="text-gray-600">Chargement de Google Maps...</p>
+            </div>
+          </div>
+        )}
+
+        {/* Indicateur de chargement OSM */}
+        {mapProvider === 'osm' && !mapReady && (
           <div className="absolute inset-0 flex items-center justify-center bg-gray-50 bg-opacity-90 z-20">
             <div className="text-center">
               <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-green-600 mx-auto mb-4"></div>

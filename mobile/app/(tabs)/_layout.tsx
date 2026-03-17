@@ -1,6 +1,5 @@
 // app/(tabs)/_layout.tsx
 import { BottomNavigation } from '@/components/layout/BottomNavigation';
-import { ActivePlanBanner } from '@/components/ui/ActivePlanBanner';
 import { useColorScheme } from '@/hooks/use-color-scheme';
 import { getGlobalStyles } from '@/styles/globalStyles';
 import { Slot, useRouter, useSegments } from 'expo-router';
@@ -58,24 +57,22 @@ export default function TabsLayout() {
   const isModalScreen = NO_BOTTOM_NAV_SCREENS.includes(currentScreen);
 
   return (
-    <View style={[styles.flex1, { 
+    <View style={[styles.flex1, {
       backgroundColor: colorScheme === 'dark' ? '#111827' : '#f9fafb',
       paddingTop: isModalScreen ? 0 : 0
     }]}>
-      {/* Bandeau forfait actif (affiché uniquement sur les écrans principaux) */}
-      {showBottomNav && <ActivePlanBanner />}
-
       {/* Contenu des pages */}
-      <View style={[styles.flex1, {
-        marginBottom: showBottomNav ? 80 : 0
-      }]}>
+      <View style={styles.flex1}>
         <Slot />
       </View>
-      
+
+      {/* Bandeau forfait actif — au-dessus de la barre de navigation
+      {showBottomNav && <ActivePlanBanner />} */}
+
       {showBottomNav && (
-        <BottomNavigation 
-          activeScreen={activeScreen} 
-          onNavigate={handleNavigate} 
+        <BottomNavigation
+          activeScreen={activeScreen}
+          onNavigate={handleNavigate}
         />
       )}
     </View>

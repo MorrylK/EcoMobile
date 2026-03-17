@@ -11,6 +11,7 @@ import { ActivityIndicator, Modal, ScrollView, TouchableOpacity, View, Switch, P
 import { useMobileI18n } from '@/lib/mobile-i18n';
 import { useMobileAuth } from '@/lib/mobile-auth';
 import * as LocalAuthentication from 'expo-local-authentication';
+import { storageUtils, STORAGE_KEYS } from '@/utils/storage';
 
 interface MobileSecurityProps {
   onNavigate: (screen: string) => void;
@@ -36,10 +37,18 @@ export function MobileSecurity({ onNavigate }: MobileSecurityProps) {
   const [isBiometricAvailable, setIsBiometricAvailable] = useState(false);
   const [biometricType, setBiometricType] = useState<string | null>(null);
 
-  // Vérifie si la biométrie est disponible sur l'appareil
+  // Charge l'état persisté + vérifie la disponibilité biométrique
   useEffect(() => {
     checkBiometricAvailability();
   }, []);
+
+  useEffect(() => {
+    if (isBiometricAvailable) {
+      storageUtils.getBoolean(STORAGE_KEYS.BIOMETRIC_AUTH).then((val) => {
+        setBiometricAuth(val ?? false);
+      });
+    }
+  }, [isBiometricAvailable]);
 
   const checkBiometricAvailability = async () => {
     // Sur web, on désactive complètement la biométrie
@@ -96,11 +105,9 @@ export function MobileSecurity({ onNavigate }: MobileSecurityProps) {
 
         if (authResult.success) {
           haptics.success();
+          await storageUtils.setBoolean(STORAGE_KEYS.BIOMETRIC_AUTH, true);
           setBiometricAuth(true);
           toast.success(t('security.biometricEnabled'));
-          
-          // Ici, vous pourriez sauvegarder le statut dans votre backend
-          // await userService.enableBiometricAuth();
         } else {
           haptics.error();
           toast.error(t('security.biometricAuthFailed'));
@@ -113,11 +120,9 @@ export function MobileSecurity({ onNavigate }: MobileSecurityProps) {
     } else {
       // Désactiver la biométrie
       haptics.light();
+      await storageUtils.setBoolean(STORAGE_KEYS.BIOMETRIC_AUTH, false);
       setBiometricAuth(false);
       toast.info(t('security.biometricDisabled'));
-      
-      // Ici, vous pourriez mettre à jour le statut dans votre backend
-      // await userService.disableBiometricAuth();
     }
   };
 

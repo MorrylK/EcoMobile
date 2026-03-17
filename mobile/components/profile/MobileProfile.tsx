@@ -78,11 +78,10 @@ export default function MobileProfile({ onNavigate }: MobileProfileProps) {
       const [stats, notificationsEnabled, docsStatus] = await Promise.all([
         userService.getStats(),
         notificationService.areNotificationsEnabled(),
-        documentService.getDocumentsStatus().catch(() => null) // Ne pas bloquer si erreur
+        documentService.getDocumentsStatus().catch(() => null)
       ]);
 
       setUserStats(stats);
-      // unreadNotifications est déjà géré par useNotificationSSE
       setNotifications(notificationsEnabled);
       setDocumentsStatus(docsStatus);
       

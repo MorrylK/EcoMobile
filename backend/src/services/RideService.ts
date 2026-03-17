@@ -175,7 +175,8 @@ export class RideService {
     if (costCalculation.paymentMethod === 'WALLET') {
       const rideEndTime = new Date();
       const pricingConfig = await prisma.pricingConfig.findFirst({ where: { isActive: true } });
-      const fallbackHourlyRate = pricingConfig?.baseHourlyRate ?? 200;
+      if (!pricingConfig) throw new Error('Aucune configuration tarifaire active trouvée');
+      const fallbackHourlyRate = pricingConfig.baseHourlyRate;
       const freeDayResult = await FreeDaysRuleService.applyFreeDay(
         ride.userId,
         ride.startTime,
