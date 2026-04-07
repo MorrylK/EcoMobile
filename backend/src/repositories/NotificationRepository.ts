@@ -8,6 +8,7 @@ export interface Notification {
   message: string;
   type: string;
   isRead: boolean;
+  metadata?: any;
   createdAt: Date;
 }
 
@@ -16,6 +17,7 @@ export interface CreateNotificationDTO {
   title: string;
   message: string;
   type: string;
+  metadata?: any;
 }
 
 class NotificationRepository extends BaseRepository<Notification> {

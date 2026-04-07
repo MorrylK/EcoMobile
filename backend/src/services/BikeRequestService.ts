@@ -278,7 +278,12 @@ export class BikeRequestService {
       userId: request.userId,
       title: 'Déverrouillage validé - Trajet démarré',
       message: `Votre demande de déverrouillage du vélo ${request.bike.code} a été approuvée. Votre trajet a commencé !`,
-      type: 'UNLOCK_APPROVED'
+      type: 'UNLOCK_APPROVED',
+      metadata: {
+        bikeId: request.bikeId,
+        bike: request.bike,
+        rideId: result.ride.id
+      }
     });
 
     return result;
@@ -304,7 +309,11 @@ export class BikeRequestService {
       userId: request.userId,
       title: 'Déverrouillage refusé',
       message: `Votre demande de déverrouillage a été refusée. Raison: ${reason}`,
-      type: 'UNLOCK_REJECTED'
+      type: 'UNLOCK_REJECTED',
+      metadata: {
+        bikeId: request.bikeId,
+        reason
+      }
     });
 
     return request;
@@ -445,7 +454,11 @@ export class BikeRequestService {
       userId: request.userId,
       title: 'Trajet terminé',
       message,
-      type: 'LOCK_APPROVED'
+      type: 'LOCK_APPROVED',
+      metadata: {
+        bikeId: request.bikeId,
+        rideId: request.rideId
+      }
     });
 
     return result;

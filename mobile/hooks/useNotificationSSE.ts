@@ -1,5 +1,5 @@
 import { useEffect, useRef, useState } from 'react';
-import { AppState, AppStateStatus } from 'react-native';
+import { AppState, AppStateStatus, DeviceEventEmitter } from 'react-native';
 import { authService } from '@/services/authService';
 import { notificationService } from '@/services/notificationService';
 import { API_CONFIG } from '@/lib/api/config';
@@ -13,7 +13,7 @@ export function useNotificationSSE() {
   const [unreadCount, setUnreadCount] = useState<number>(0);
   const [isConnected, setIsConnected] = useState<boolean>(false);
   const abortControllerRef = useRef<AbortController | null>(null);
-  const reconnectTimeoutRef = useRef<NodeJS.Timeout | null>(null);
+  const reconnectTimeoutRef = useRef<any>(null);
   const reconnectAttempts = useRef<number>(0);
   const maxReconnectAttempts = 5;
   const reconnectDelay = 3000; // 3 secondes
@@ -21,6 +21,7 @@ export function useNotificationSSE() {
 
   useEffect(() => {
     let isMounted = true;
+    let cleanupPolling: (() => void) | null = null;
 
     const connectSSE = async () => {
       // Annuler la connexion existante si elle existe
@@ -49,7 +50,7 @@ export function useNotificationSSE() {
             'Accept': 'text/event-stream',
             'Cache-Control': 'no-cache',
           },
-          signal: abortController.signal,
+          signal: abortController.signal as any,
         });
 
         if (!response.ok) {
@@ -62,6 +63,12 @@ export function useNotificationSSE() {
 
         setIsConnected(true);
         reconnectAttempts.current = 0;
+
+        // Arrêter le polling si on est connecté en SSE
+        if (cleanupPolling) {
+          cleanupPolling();
+          cleanupPolling = null;
+        }
 
         // Lire le stream
         const reader = response.body?.getReader();
@@ -109,17 +116,16 @@ export function useNotificationSSE() {
                     } else if (data.type === 'notification') {
                       // Nouvelle notification reçue
                       setUnreadCount((prev) => prev + 1);
+                      
+                      // Émettre un événement global pour que les composants puissent réagir
+                      DeviceEventEmitter.emit('notification_received', data.notification);
                     }
                   } catch (error) {
                     console.error('[SSE] Error parsing data:', error);
                   }
                 } else if (line.startsWith('event: ')) {
-                  // Type d'événement (notification, unread_count, etc.)
-                  const eventType = line.substring(7);
-                  // On traite l'événement dans la ligne data suivante
+                  line.substring(7);
                 } else if (line.startsWith('id: ')) {
-                  // ID de l'événement (pour la reprise en cas de reconnexion)
-                  // On pourrait l'utiliser pour reprendre où on s'est arrêté
                 }
               }
             }
@@ -152,7 +158,9 @@ export function useNotificationSSE() {
               }, reconnectDelay * reconnectAttempts.current);
             } else {
               console.error('[SSE] Max reconnection attempts reached. Falling back to polling.');
-              fallbackToPolling();
+              if (!cleanupPolling) {
+                cleanupPolling = fallbackToPolling();
+              }
             }
           }
         });
@@ -163,14 +171,16 @@ export function useNotificationSSE() {
         console.error('[SSE] Error creating connection:', error);
         if (isMounted) {
           setIsConnected(false);
-          fallbackToPolling();
+          if (!cleanupPolling) {
+            cleanupPolling = fallbackToPolling();
+          }
         }
       }
     };
 
     const fallbackToPolling = () => {
       // Fallback vers polling toutes les 60 secondes
-      let pollInterval: NodeJS.Timeout | null = null;
+      let pollInterval: any = null;
       
       const startPolling = () => {
         pollInterval = setInterval(async () => {
@@ -195,8 +205,6 @@ export function useNotificationSSE() {
         }
       };
     };
-
-    let cleanupPolling: (() => void) | null = null;
 
     // Charger le nombre initial
     notificationService.getUnreadCount()

@@ -8,6 +8,7 @@ export interface NotificationWithEmail {
   title: string;
   message: string;
   type: string;
+  metadata?: any;
   sendEmail?: boolean;
   emailData?: {
     userEmail: string;
@@ -33,7 +34,8 @@ class NotificationService {
       userId: data.userId,
       title: data.title,
       message: data.message,
-      type: data.type
+      type: data.type,
+      metadata: data.metadata
     });
 
     // Envoyer la notification via SSE en temps réel (si des clients sont connectés)
@@ -607,6 +609,7 @@ class NotificationService {
       title: data.title,
       message: data.message,
       type: data.type,
+      metadata: data.actionUrl ? { actionUrl: data.actionUrl } : undefined
     });
   }
 }

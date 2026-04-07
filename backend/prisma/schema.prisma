@@ -307,6 +307,7 @@ model Notification {
   message   String
   type      String
   isRead    Boolean  @default(false)
+  metadata  Json?
   createdAt DateTime @default(now())
 
   // Relations

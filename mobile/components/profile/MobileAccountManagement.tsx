@@ -20,7 +20,7 @@ import { reservationService } from '@/services/reservationService';
 import { Calendar, Wallet, CreditCard, Clock, Shield, AlertTriangle, ArrowLeft, Lock, Unlock, FileText, MapPin, Trash2, Lightbulb } from 'lucide-react-native';
 import React, { useState, useCallback } from 'react';
 import { useFocusEffect } from '@react-navigation/native';
-import { View, ScrollView, RefreshControl, TouchableOpacity, Image } from 'react-native';
+import { View, ScrollView, RefreshControl, TouchableOpacity, Image, DeviceEventEmitter } from 'react-native';
 import { useMobileI18n } from '@/lib/mobile-i18n';
 
 interface MobileAccountManagementProps {
@@ -123,6 +123,51 @@ export function MobileAccountManagement({ onBack, onNavigate, initialTab = 'over
       };
     }, [activeTab, dataCache])
   );
+
+  // Synchronisation en temps réel via SSE (DeviceEventEmitter)
+  React.useEffect(() => {
+    const subscription = DeviceEventEmitter.addListener('notification_received', (notification) => {
+      console.log('[SSE Sync] Notification received:', notification.type);
+      
+      // Rafraîchir les données systématiquement pour tout type de notification
+      loadAccountData();
+      if (activeTab === 'requests') {
+        loadRequests();
+      }
+
+      // Redirection automatique selon le type de notification
+      switch (notification.type) {
+        case 'UNLOCK_APPROVED':
+          haptics.success();
+          toast.success(t('status.approved') || 'Déverrouillage validé !');
+          // Rediriger vers l'écran de trajet en cours avec les données du vélo
+          if (notification.metadata && notification.metadata.bike) {
+            onNavigate('ride-in-progress', { bikeData: notification.metadata.bike });
+          } else {
+            // Fallback si metadata manquante
+            onNavigate('home');
+          }
+          break;
+
+        case 'LOCK_APPROVED':
+          haptics.success();
+          toast.success(t('status.completed') || 'Trajet terminé !');
+          onNavigate('home');
+          break;
+
+        case 'UNLOCK_REJECTED':
+        case 'LOCK_REJECTED':
+          haptics.error();
+          toast.error(notification.message || 'Demande refusée');
+          loadRequests();
+          break;
+      }
+    });
+
+    return () => {
+      subscription.remove();
+    };
+  }, [activeTab, onNavigate]);
 
   const loadAccountData = async () => {
     try {

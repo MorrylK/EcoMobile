@@ -190,14 +190,36 @@ export class WalletService {
     const wallet = await this.getOrCreateWallet(userId);
 
     const result = await prisma.$transaction(async (tx) => {
-      // Déduire de la caution (ou mettre en solde négatif si insuffisant)
-      const deductFromDeposit = Math.min(amount, wallet.deposit);
-      const remainingAmount = amount - deductFromDeposit;
+      // Vérifier si l'utilisateur a un déblocage sans caution actif
+      const user = await tx.user.findUnique({
+        where: { id: userId },
+        select: { depositExemptionUntil: true }
+      });
+
+      const hasActiveExemption = user?.depositExemptionUntil && new Date(user.depositExemptionUntil) > new Date();
+      
+      let deductFromDeposit = 0;
+      let deductFromBalance = 0;
+      let remainingAmount = 0;
+      let source = 'DEPOSIT';
+
+      if (hasActiveExemption) {
+        // Si l'exemption est active, on prend sur le solde
+        source = 'BALANCE';
+        deductFromBalance = Math.min(amount, wallet.balance);
+        remainingAmount = amount - deductFromBalance;
+      } else {
+        // Sinon, on prend sur la caution (comportement par défaut)
+        source = 'DEPOSIT';
+        deductFromDeposit = Math.min(amount, wallet.deposit);
+        remainingAmount = amount - deductFromDeposit;
+      }
 
       const updatedWallet = await tx.wallet.update({
         where: { id: wallet.id },
         data: {
-          deposit: { decrement: deductFromDeposit },
+          balance: hasActiveExemption ? { decrement: deductFromBalance } : undefined,
+          deposit: !hasActiveExemption ? { decrement: deductFromDeposit } : undefined,
           negativeBalance: remainingAmount > 0 ? { increment: remainingAmount } : undefined
         }
       });
@@ -211,7 +233,7 @@ export class WalletService {
           fees: 0,
           totalAmount: amount,
           status: TransactionStatus.COMPLETED,
-          paymentMethod: 'DEPOSIT',
+          paymentMethod: source,
           validatedBy: chargedBy,
           validatedAt: new Date(),
           metadata: { 
@@ -219,6 +241,8 @@ export class WalletService {
             images: images || [],
             chargedBy,
             deductFromDeposit,
+            deductFromBalance,
+            source,
             addedToNegativeBalance: remainingAmount,
             incidentId: incidentId || null
           }
@@ -226,11 +250,12 @@ export class WalletService {
       });
 
       // Notification à l'utilisateur
+      const sourceText = hasActiveExemption ? 'portefeuille' : 'caution';
       await tx.notification.create({
         data: {
           userId,
           title: 'Frais de dégâts',
-          message: `Des frais de ${amount} FCFA ont été prélevés sur votre caution pour : ${description}`,
+          message: `Des frais de ${amount} FCFA ont été prélevés sur votre ${sourceText} pour : ${description}`,
           type: 'DAMAGE_CHARGE'
         }
       });
