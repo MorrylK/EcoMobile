@@ -1,8 +1,12 @@
 import { useEffect, useRef, useState } from 'react';
 import { AppState, AppStateStatus, DeviceEventEmitter } from 'react-native';
+import { useRouter } from 'expo-router';
+
 import { authService } from '@/services/authService';
 import { notificationService } from '@/services/notificationService';
 import { API_CONFIG } from '@/lib/api/config';
+import { toast } from '@/components/ui/Toast';
+import { haptics } from '@/utils/haptics';
 
 /**
  * Hook pour utiliser Server-Sent Events (SSE) pour les notifications en temps réel sur mobile
@@ -10,7 +14,9 @@ import { API_CONFIG } from '@/lib/api/config';
  * Remplace le polling et réduit drastiquement le nombre de requêtes
  */
 export function useNotificationSSE() {
+  const router = useRouter();
   const [unreadCount, setUnreadCount] = useState<number>(0);
+
   const [isConnected, setIsConnected] = useState<boolean>(false);
   const abortControllerRef = useRef<AbortController | null>(null);
   const reconnectTimeoutRef = useRef<any>(null);
@@ -113,13 +119,42 @@ export function useNotificationSSE() {
                     
                     if (data.type === 'unread_count') {
                       setUnreadCount(data.count);
+                      DeviceEventEmitter.emit('unread_count_changed', data.count);
                     } else if (data.type === 'notification') {
                       // Nouvelle notification reçue
-                      setUnreadCount((prev) => prev + 1);
+                      const notification = data.data;
+                      setUnreadCount((prev) => {
+                        const newCount = prev + 1;
+                        DeviceEventEmitter.emit('unread_count_changed', newCount);
+                        return newCount;
+                      });
                       
+                      // Gérer le blocage de compte en temps réel
+                      if (notification.type === 'USER_STATUS_CHANGED' && notification.status === 'blocked') {
+                        router.replace('/blocked' as any);
+                      }
+
+                      // Redirection automatique pour les actions sur les vélos
+                      if (notification.type === 'UNLOCK_APPROVED') {
+                        haptics.success();
+                        toast.success(notification.message || 'Déverrouillage approuvé');
+                        router.push({
+                          pathname: '/(modals)/ride-in-progress' as any,
+                          params: { bikeData: JSON.stringify(notification.metadata?.bike || {}) }
+                        });
+                      } else if (notification.type === 'LOCK_APPROVED') {
+                        haptics.success();
+                        toast.success(notification.message || 'Verrouillage approuvé');
+                        router.replace('/(tabs)/home' as any);
+                      } else if (notification.type === 'UNLOCK_REJECTED' || notification.type === 'LOCK_REJECTED') {
+                        haptics.error();
+                        toast.error(notification.message || 'Demande refusée');
+                      }
+
                       // Émettre un événement global pour que les composants puissent réagir
-                      DeviceEventEmitter.emit('notification_received', data.notification);
+                      DeviceEventEmitter.emit('notification_received', notification);
                     }
+
                   } catch (error) {
                     console.error('[SSE] Error parsing data:', error);
                   }
@@ -189,6 +224,7 @@ export function useNotificationSSE() {
               const count = await notificationService.getUnreadCount();
               if (isMounted) {
                 setUnreadCount(count);
+                DeviceEventEmitter.emit('unread_count_changed', count);
               }
             } catch (error) {
               console.error('[SSE Fallback] Error fetching unread count:', error);
@@ -211,6 +247,7 @@ export function useNotificationSSE() {
       .then((count) => {
         if (isMounted) {
           setUnreadCount(count);
+          DeviceEventEmitter.emit('unread_count_changed', count);
         }
       })
       .catch(console.error);
@@ -251,4 +288,29 @@ export function useNotificationSSE() {
   }, []);
 
   return { unreadCount, isConnected };
+}
+
+/**
+ * Hook pour écouter les changements du nombre de notifications non lues
+ * sans créer de nouvelle connexion SSE
+ */
+export function useUnreadCount() {
+  const [unreadCount, setUnreadCount] = useState<number>(0);
+
+  useEffect(() => {
+    // Charger le nombre initial
+    notificationService.getUnreadCount()
+      .then(setUnreadCount)
+      .catch(console.error);
+
+    const subscription = DeviceEventEmitter.addListener('unread_count_changed', (count: number) => {
+      setUnreadCount(count);
+    });
+
+    return () => {
+      subscription.remove();
+    };
+  }, []);
+
+  return unreadCount;
 }

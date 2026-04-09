@@ -16,6 +16,7 @@ import { ToastContainer } from '@/components/ui/ToastContainer';
 import { UpdateChecker } from '@/components/ui/UpdateChecker';
 import { BiometricLockScreen } from '@/components/ui/BiometricLockScreen';
 import { useBiometricLock } from '@/hooks/useBiometricLock';
+import { useNotificationSSE } from '@/hooks/useNotificationSSE';
 import "@/global.css";
 
 const CustomLightTheme = {
@@ -49,6 +50,9 @@ SplashScreen.preventAutoHideAsync();
 function AppContent() {
   const colorScheme = useColorScheme();
   const { isLocked, isReady, unlock } = useBiometricLock();
+
+  // Activer SSE au niveau global
+  useNotificationSSE();
 
   return (
     <ThemeProvider value={colorScheme === 'dark' ? CustomDarkTheme : CustomLightTheme}>

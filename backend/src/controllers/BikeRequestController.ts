@@ -856,7 +856,7 @@ export class BikeRequestController {
       if (type === 'unlock') {
         result = await BikeRequestService.rejectUnlockRequest(id, adminId, reason);
       } else {
-        throw new Error('Rejet des demandes de verrouillage non implémenté');
+        result = await BikeRequestService.rejectLockRequest(id, adminId, reason);
       }
 
       await logActivity(

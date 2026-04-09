@@ -4,6 +4,8 @@ import NotificationService from './NotificationService';
 import { imageService } from './ImageService';
 import PricingTierService from './PricingTierService';
 import FreeDaysRuleService from './FreeDaysRuleService';
+import { notificationSSEService } from './NotificationSSEService';
+
 
 export class BikeRequestService {
   private notificationService: NotificationService;
@@ -273,12 +275,11 @@ export class BikeRequestService {
       return { request: updatedRequest, ride };
     });
 
-    // Notifier l'utilisateur
-    await this.notificationService.createNotification({
-      userId: request.userId,
+    // Émettre un événement SSE pour informer le mobile immédiatement
+    await notificationSSEService.sendNotificationToUser(request.userId, {
+      type: 'UNLOCK_APPROVED',
       title: 'Déverrouillage validé - Trajet démarré',
       message: `Votre demande de déverrouillage du vélo ${request.bike.code} a été approuvée. Votre trajet a commencé !`,
-      type: 'UNLOCK_APPROVED',
       metadata: {
         bikeId: request.bikeId,
         bike: request.bike,
@@ -288,6 +289,7 @@ export class BikeRequestService {
 
     return result;
   }
+
 
   /**
    * Rejeter une demande de déverrouillage (admin)
@@ -304,12 +306,11 @@ export class BikeRequestService {
       include: { user: true, bike: true }
     });
 
-    // Notifier l'utilisateur
-    await this.notificationService.createNotification({
-      userId: request.userId,
+    // Émettre un événement SSE pour informer le mobile immédiatement
+    await notificationSSEService.sendNotificationToUser(request.userId, {
+      type: 'UNLOCK_REJECTED',
       title: 'Déverrouillage refusé',
       message: `Votre demande de déverrouillage a été refusée. Raison: ${reason}`,
-      type: 'UNLOCK_REJECTED',
       metadata: {
         bikeId: request.bikeId,
         reason
@@ -318,6 +319,7 @@ export class BikeRequestService {
 
     return request;
   }
+
 
   /**
    * Valider une demande de verrouillage (admin)
@@ -450,11 +452,11 @@ export class BikeRequestService {
       ? `Votre trajet avec le vélo ${request.bike.code} est terminé. Durée: ${result.ride.duration} min, Coût: ${result.ride.cost} FCFA`
       : `Votre demande de verrouillage du vélo ${request.bike.code} a été approuvée`;
 
-    await this.notificationService.createNotification({
-      userId: request.userId,
+    // Émettre un événement SSE pour informer le mobile immédiatement
+    await notificationSSEService.sendNotificationToUser(request.userId, {
+      type: 'LOCK_APPROVED',
       title: 'Trajet terminé',
       message,
-      type: 'LOCK_APPROVED',
       metadata: {
         bikeId: request.bikeId,
         rideId: request.rideId
@@ -463,6 +465,49 @@ export class BikeRequestService {
 
     return result;
   }
+
+
+  /**
+   * Rejeter une demande de verrouillage (admin)
+   */
+  async rejectLockRequest(requestId: string, adminId: string, reason: string): Promise<any> {
+    const request = await prisma.lockRequest.update({
+      where: { id: requestId },
+      data: {
+        status: RequestStatus.REJECTED,
+        rejectedAt: new Date(),
+        validatedBy: adminId,
+        rejectionReason: reason
+      },
+      include: { user: true, bike: true }
+    });
+
+    // Notifier l'utilisateur (base de données)
+    await this.notificationService.createNotification({
+      userId: request.userId,
+      title: 'Verrouillage refusé',
+      message: `Votre demande de verrouillage a été refusée. Raison: ${reason}`,
+      type: 'LOCK_REJECTED',
+      metadata: {
+        bikeId: request.bikeId,
+        reason
+      }
+    });
+
+    // Émettre un événement SSE pour informer le mobile immédiatement
+    await notificationSSEService.sendNotificationToUser(request.userId, {
+      type: 'LOCK_REJECTED',
+      title: 'Verrouillage refusé',
+      message: `Votre demande de verrouillage a été refusée. Raison: ${reason}`,
+      metadata: {
+        bikeId: request.bikeId,
+        reason
+      }
+    });
+
+    return request;
+  }
+
 
   /**
    * Traiter le paiement du trajet

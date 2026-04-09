@@ -2,6 +2,8 @@ import { AppError } from '../middleware/errorHandler';
 import { prisma } from '../config/prisma';
 import { User, UserRole, Prisma } from '@prisma/client';
 import bcrypt from 'bcryptjs';
+import { notificationSSEService } from './NotificationSSEService';
+
 
 type UserWithRelations = Prisma.UserGetPayload<{
   include: {
@@ -318,10 +320,23 @@ export class UserService {
       data.depositExemptionGrantedAt = null;
     }
 
-    return await prisma.user.update({
+    const updatedUser = await prisma.user.update({
       where: { id: userId },
       data
     });
+
+    // Émettre un événement SSE pour informer le mobile immédiatement
+    await notificationSSEService.sendNotificationToUser(userId, {
+      type: 'USER_STATUS_CHANGED',
+      status: data.status,
+      isActive: data.isActive,
+      message: isActive 
+        ? 'Votre compte a été débloqué.' 
+        : 'Votre compte a été bloqué. Veuillez contacter le support.'
+    });
+
+    return updatedUser;
+
   }
 
   /**

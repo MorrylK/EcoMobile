@@ -1256,7 +1256,7 @@ export function MobileAccountManagement({ onBack, onNavigate, initialTab = 'over
                         }}
                         style={[{ borderColor: '#dc2626' }]}
                       >
-                        <Text color="#dc2626" size="xs">Supprimer</Text>
+                        <Text color="#dc2626" size="xs">Annuler</Text>
                       </Button>
                     )}
                   </View>
@@ -1340,7 +1340,7 @@ export function MobileAccountManagement({ onBack, onNavigate, initialTab = 'over
                         }}
                         style={[{ borderColor: '#dc2626' }]}
                       >
-                        <Text color="#dc2626" size="xs">Supprimer</Text>
+                        <Text color="#dc2626" size="xs">Annuler</Text>
                       </Button>
                     )}
                   </View>

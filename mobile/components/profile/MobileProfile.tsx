@@ -20,7 +20,7 @@ import { authService } from '@/services/authService';
 import { Card } from '@/components/ui/Card';
 import { Badge } from '@/components/ui/Badge';
 import { documentService, type DocumentsStatus } from '@/services/documentService';
-import { useNotificationSSE } from '@/hooks/useNotificationSSE';
+import { useUnreadCount } from '@/hooks/useNotificationSSE';
 
 interface MobileProfileProps {
   onNavigate: (screen: string) => void;
@@ -34,7 +34,7 @@ export default function MobileProfile({ onNavigate }: MobileProfileProps) {
   const [showLogoutDialog, setShowLogoutDialog] = useState(false);
   const [notifications, setNotifications] = useState(true);
   const [userStats, setUserStats] = useState<UserStats | null>(null);
-  const { unreadCount: unreadNotifications } = useNotificationSSE();
+  const unreadNotifications = useUnreadCount();
   const [isLoading, setIsLoading] = useState(false);
   const [documentsStatus, setDocumentsStatus] = useState<DocumentsStatus | null>(null);
   const isInitialMount = useRef(true);
