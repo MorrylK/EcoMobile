@@ -4,7 +4,7 @@ export const getApiBaseUrl = (): string => {
   }
   
   if ((import.meta as any).env.VITE_NODE_ENV === 'production') {
-    return 'https://env-freebike-xybronix.hidora.com/api/v1';
+    return 'https://ecomobile-8bx0.onrender.com/api/v1';
   }
   
   return 'http://localhost:10000/api/v1';

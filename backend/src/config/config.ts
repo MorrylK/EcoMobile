@@ -7,6 +7,19 @@ if (process.env.NODE_ENV === 'production') {
   dotenv.config();
 }
 
+// 0. Configuration des URLs de base de données par plateforme
+const deployTarget = process.env.DEPLOY_TARGET || 'JELASTIC';
+
+if (deployTarget === 'RENDER') {
+  if (process.env.RENDER_DATABASE_URL) {
+    process.env.DATABASE_URL = process.env.RENDER_DATABASE_URL;
+  }
+} else {
+  if (process.env.JELASTIC_DATABASE_URL) {
+    process.env.DATABASE_URL = process.env.JELASTIC_DATABASE_URL;
+  }
+}
+
 export const config = {
   env: process.env.NODE_ENV || 'development',
   port: parseInt(process.env.PORT || '5000', 10),
@@ -16,6 +29,7 @@ export const config = {
     type: (process.env.DB_TYPE || 'mysql') as 'mysql' | 'postgres' | 'sqlite' | 'mongodb' | 'cassandra',
     
     mysql: {
+      url: process.env.DATABASE_URL,
       host: process.env.MYSQL_HOST || 'localhost',
       port: parseInt(process.env.MYSQL_PORT || '3306', 10),
       user: process.env.MYSQL_USER || 'root',
@@ -103,15 +117,18 @@ export const config = {
 
 
 if (config.env === 'production') {
-  const requiredVars = [
-    'MYSQL_HOST', 'MYSQL_USER', 'MYSQL_PASSWORD', 'MYSQL_DATABASE',
-    'JWT_SECRET', 'JWT_REFRESH_SECRET'
-  ];
+  const requiredVars = ['JWT_SECRET', 'JWT_REFRESH_SECRET'];
+  if (!process.env.DATABASE_URL) {
+    requiredVars.push('MYSQL_HOST', 'MYSQL_USER', 'MYSQL_PASSWORD', 'MYSQL_DATABASE');
+  }
 
   const missingVars = requiredVars.filter(varName => !process.env[varName]);
   
   if (missingVars.length > 0) {
-    console.error('❌ Variables manquantes en production:', missingVars);
-    process.exit(1);
+    console.warn('⚠️ Variables manquantes en production:', missingVars);
+    if (!process.env.DATABASE_URL) {
+      console.error('❌ Arrêt: Variables de base de données manquantes');
+      process.exit(1);
+    }
   }
 }

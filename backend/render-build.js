@@ -4,24 +4,60 @@ const path = require('path');
 
 console.log('🚀 Starting Render deployment...');
 
+// 1. Configuration dynamique de la base de données
+const deployTarget = process.env.DEPLOY_TARGET || 'JELASTIC';
+if (deployTarget === 'RENDER') {
+  console.log('🌐 Deployment Target: RENDER');
+  if (process.env.RENDER_DATABASE_URL) {
+    process.env.DATABASE_URL = process.env.RENDER_DATABASE_URL;
+    console.log('✅ DATABASE_URL set to RENDER_DATABASE_URL');
+  } else {
+    console.error('❌ RENDER_DATABASE_URL is not defined');
+    process.exit(1);
+  }
+} else {
+  console.log('🏢 Deployment Target: JELASTIC');
+  if (process.env.JELASTIC_DATABASE_URL) {
+    process.env.DATABASE_URL = process.env.JELASTIC_DATABASE_URL;
+    console.log('✅ DATABASE_URL set to JELASTIC_DATABASE_URL');
+  }
+}
+
 try {
   // 1. Installation complète
   console.log('📦 Installing all dependencies...');
   execSync('npm ci', { stdio: 'inherit' });
 
-  // 2. Génération Prisma Client
+  // 2. Migration des données de Jelastic vers Render (optionnel)
+  if (deployTarget === 'RENDER' && process.env.RUN_MIGRATION === 'true') {
+    console.log('🚚 Running data migration from Jelastic...');
+    try {
+      execSync('node scripts/migrate-db.js', { stdio: 'inherit' });
+    } catch (migError) {
+      console.error('⚠️ Migration failed, but continuing with build:', migError.message);
+    }
+  }
+
+  // 3. Génération Prisma Client
   console.log('🔧 Generating Prisma client...');
   execSync('npx prisma generate', { stdio: 'inherit' });
 
-  // 3. Build TypeScript
+  // 4. Build TypeScript
   console.log('🏗️ Building TypeScript...');
   execSync('npm run build', { stdio: 'inherit' });
 
-  // 4. Vérification de la connexion base de données
-  console.log('🔌 Testing database connection...');
+  // Ensure uploads directory exists in dist
+  const distUploadsDir = path.join(__dirname, 'dist', 'uploads');
+  if (!fs.existsSync(distUploadsDir)) {
+    console.log('📁 Creating dist/uploads directory...');
+    fs.mkdirSync(distUploadsDir, { recursive: true });
+  }
+
+  // 5. Mise à jour du schéma sur la nouvelle BD
+  console.log('🔌 Syncing database schema...');
   execSync('npx prisma db push', { stdio: 'inherit' });
 
-  // 5. Seed intelligent avec plusieurs méthodes
+  // 6. Seed intelligent avec plusieurs méthodes
   console.log('🌱 Seeding database...');
   
   const seedMethods = [
