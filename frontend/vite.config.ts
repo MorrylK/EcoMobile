@@ -35,7 +35,7 @@
 
   export default defineConfig({
     plugins: [react(), reactDOMCompatPlugin()],
-    base: '/',
+    base: process.env.NODE_ENV === 'production' ? '/EcoMobile/' : '/',
     resolve: {
       extensions: ['.js', '.jsx', '.ts', '.tsx', '.json'],
       alias: {

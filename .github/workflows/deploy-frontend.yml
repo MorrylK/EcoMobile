@@ -34,7 +34,9 @@ jobs:
 
       - name: Build frontend
         working-directory: ./frontend
-        run: npm run build
+        run: |
+          npm run build
+          cp build/index.html build/404.html
         env:
           VITE_API_URL: ${{ secrets.VITE_API_URL }}
           VITE_APP_DOWNLOAD_URL: ${{ secrets.VITE_APP_DOWNLOAD_URL }}
