@@ -29,7 +29,8 @@ const getApiBaseUrl = () => {
   // Priorité 3: URL par défaut depuis app.json
   // const defaultUrl = 'http://10.33.52.189:10000/api/v1';
   // const defaultUrl = 'https://env-freebike-xybronix.hidora.com/api/v1';
-  const defaultUrl = 'https://ecomobile-8bx0.onrender.com/api/v1';
+  // const defaultUrl = 'https://ecomobile-8bx0.onrender.com/api/v1';
+  const defaultUrl = 'http://www.srv884070.hstgr.cloud:22333/api/v1';
   
   // En développement, toujours utiliser l'URL de développement
   if (__DEV__) {
