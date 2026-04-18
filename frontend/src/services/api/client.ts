@@ -1,10 +1,10 @@
 export const getApiBaseUrl = (): string => {
   if (typeof import.meta !== 'undefined' && (import.meta as any).env) {
-    return (import.meta as any).env.VITE_API_URL_DEV;
+    return 'http://www.srv884070.hstgr.cloud:22333/api/v1';
   }
   
   if ((import.meta as any).env.VITE_NODE_ENV === 'production') {
-    return (import.meta as any).env.VITE_API_URL_PRODUCTION;
+    return 'http://www.srv884070.hstgr.cloud:22333/api/v1';
   }
   
   return 'http://www.srv884070.hstgr.cloud:22333/api/v1';
