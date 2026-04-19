@@ -22,8 +22,8 @@ import { i18nMiddleware } from './middleware/i18n';
 
 const app = express();
 
-// Security Middleware
-app.use(helmet());
+// Trust Cloudflare Proxy
+app.set('trust proxy', 1);
 
 // CORS Configuration dynamique selon .env
 app.use(cors({
@@ -46,6 +46,11 @@ app.use(cors({
   credentials: true,
   methods: ['GET', 'POST', 'PUT', 'DELETE', 'PATCH', 'OPTIONS'],
   allowedHeaders: ['Content-Type', 'Authorization', 'Accept', 'Accept-Language', 'Origin', 'X-Requested-With']
+}));
+
+// Security Middleware (Après CORS pour éviter de bloquer les OPTIONS)
+app.use(helmet({
+  hsts: false // Désactivé car géré par Cloudflare, évite les redirections conflictuelles
 }));
 
 // Body Parser
