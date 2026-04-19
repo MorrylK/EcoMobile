@@ -21,7 +21,10 @@
       "infoPlist": {
         "NSPhotoLibraryUsageDescription": "L'application a besoin d'accéder à vos photos pour modifier votre photo de profil.",
         "NSCameraUsageDescription": "L'application a besoin d'accéder à votre caméra pour prendre une photo de profil.",
-        "ITSAppUsesNonExemptEncryption": false
+        "ITSAppUsesNonExemptEncryption": false,
+        "NSAppTransportSecurity": {
+          "NSAllowsArbitraryLoads": true
+        }
       },
       "bundleIdentifier": "com.Xybronix.FreeBike"
     },
@@ -40,6 +43,7 @@
         "android.permission.REQUEST_INSTALL_PACKAGES",
         "android.permission.INTERNET"
       ],
+      "usesCleartextTraffic": true,
       "package": "com.xybronix.FreeBike",
       "versionCode": 1
     },

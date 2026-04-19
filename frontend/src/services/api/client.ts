@@ -1,12 +1,11 @@
 export const getApiBaseUrl = (): string => {
-  if (typeof import.meta !== 'undefined' && (import.meta as any).env) {
-    return 'http://www.srv884070.hstgr.cloud:22333/api/v1';
+  // En production, utiliser le domaine via Cloudflare (HTTPS)
+  const meta = (import.meta as any);
+  if (meta.env.PROD || meta.env.VITE_NODE_ENV === 'production') {
+    return 'https://api.freebike237.com/api/v1';
   }
   
-  if ((import.meta as any).env.VITE_NODE_ENV === 'production') {
-    return 'http://www.srv884070.hstgr.cloud:22333/api/v1';
-  }
-  
+  // En développement, utiliser l'IP ou le localhost
   return 'http://www.srv884070.hstgr.cloud:22333/api/v1';
 };
 
