@@ -118,7 +118,7 @@ export class PaymentService {
         customer_phone: request.phoneNumber,
         merchant_phone: merchantNumber,
         description: request.description || 'FreeBike Wallet Recharge',
-        callback_url: `${process.env.BACKEND_URL || 'http://localhost:5000'}/api/v1/payments/callback`,
+        callback_url: `${process.env.API_URL || 'http://localhost:8080'}/api/v1/payments/callback`,
         return_url: `${config.app.frontendUrl}/wallet?payment=success`,
         cancel_url: `${config.app.frontendUrl}/wallet?payment=cancelled`
       });

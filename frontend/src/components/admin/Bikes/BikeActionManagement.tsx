@@ -8,6 +8,7 @@ import { Textarea } from '../../ui/textarea';
 import { bikeActionService, type UnlockRequest, type LockRequest } from '../../../services/api/bikeAction.service';
 import { toast } from 'sonner';
 import { useTranslation } from '../../../lib/i18n';
+import { getApiBaseUrl } from '../../../services/api/client';
 
 declare global {
   interface ImportMeta {
@@ -269,7 +270,7 @@ export function BikeActionManagement() {
     
     // Obtenir l'URL de base sans /api/v1 pour les images statiques
     const getBaseUrl = () => {
-      const apiUrl = import.meta.env.VITE_API_URL || 'http://localhost:5000/api/v1';
+      const apiUrl = getApiBaseUrl();
       // Enlever /api/v1 si présent
       return apiUrl.replace(/\/api\/v1\/?$/, '');
     };

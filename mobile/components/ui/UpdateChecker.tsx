@@ -35,14 +35,15 @@ function semverGt(a: string, b: string): boolean {
   return aPat > bPat;
 }
 
-const API_BASE: string =
-  (Constants.expoConfig?.extra?.apiUrl as string) ?? 'http://localhost:3000/api/v1';
+
+const cacheDir = (FileSystem as any).cacheDirectory;
+const API_BASE: string = (Constants.expoConfig?.extra?.apiUrl as string);
 
 async function fetchVersionManifest(): Promise<AppVersionManifest | null> {
   try {
     const res = await fetch(`${API_BASE}/public/app-version`, { cache: 'no-store' });
     if (!res.ok) return null;
-    const json = await res.json();
+    const json = await res.json() as any;
     return json.data ?? null;
   } catch {
     return null;
@@ -64,7 +65,7 @@ export function UpdateChecker() {
   const [progress, setProgress] = useState(0);          // 0–100
   const [errorMsg, setErrorMsg] = useState('');
   const [manifest, setManifest] = useState<AppVersionManifest | null>(null);
-  const downloadRef = useRef<FileSystem.DownloadResumable | null>(null);
+  const downloadRef = useRef<ReturnType<typeof FileSystem.createDownloadResumable> | null>(null);
 
   useEffect(() => {
     // En mode dev, expo-updates est désactivé → on skip tout
@@ -120,7 +121,7 @@ export function UpdateChecker() {
     setProgress(0);
     setErrorMsg('');
 
-    const localUri = (FileSystem.cacheDirectory ?? '') + 'ecomobile_update.apk';
+    const localUri = (cacheDir ?? '') + 'ecomobile_update.apk';
 
     try {
       // Supprimer un éventuel APK précédent
@@ -178,9 +179,12 @@ export function UpdateChecker() {
 
   // ── Handler bouton ───────────────────────────────────────────────────────
 
-  const handleAction = () => {
-    if (kind === 'native') return handleNativeUpdate();
-    if (kind === 'ota') return handleOtaUpdate();
+  const handleAction = async () => {
+    if (kind === 'native') {
+      await handleNativeUpdate();
+    } else if (kind === 'ota') {
+      await handleOtaUpdate();
+    }
   };
 
   // ── Rendu ────────────────────────────────────────────────────────────────

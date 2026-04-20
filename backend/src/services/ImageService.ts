@@ -119,7 +119,7 @@ export class ImageService {
       return imagePath;
     }
     
-    let baseUrl = process.env.API_URL || 'http://localhost:5000';
+    let baseUrl = process.env.API_URL || 'http://localhost:8080';
     
     if (req) {
       const protocol = req.protocol;

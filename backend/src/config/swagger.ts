@@ -19,12 +19,8 @@ const options = {
     },
     servers: [
       {
-        url: `http://localhost:5000/api/${config.apiVersion}`,
-        description: 'Development server (Local)'
-      },
-      {
-        url: `https://ecomobile-8bx0.onrender.com/api/${config.apiVersion}`,
-        description: 'Production server (Render)'
+        url: `${process.env.API_URL || 'http://localhost:8080'}/api/${config.apiVersion}`,
+        description: 'Production server (VPS)'
       }
     ],
     components: {
