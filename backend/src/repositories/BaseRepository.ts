@@ -38,13 +38,11 @@ export abstract class BaseRepository<T> {
   }
 
   protected quoteIdentifier(name: string): string {
-    if (this.isPostgres() || this.isSqlite()) {
-      return `"${name}"`;
-    }
     if (this.isMysql()) {
       return `\`${name}\``;
     }
-    return name;
+    // PostgreSQL and SQLite use double quotes for identifiers
+    return `"${name}"`;
   }
 
   protected buildWhereClause(where: Record<string, any>): { clause: string; params: any[] } {

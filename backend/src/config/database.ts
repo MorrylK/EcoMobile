@@ -31,7 +31,19 @@ class DatabaseManager {
       return this.connection;
     }
 
-    const dbType = config.database.type;
+    let dbType = config.database.type;
+
+    // Auto-detect from DATABASE_URL if available
+    const databaseUrl = process.env.DATABASE_URL;
+    if (databaseUrl) {
+      if (databaseUrl.startsWith('postgres://') || databaseUrl.startsWith('postgresql://')) {
+        console.log('🔄 DatabaseManager - Auto-detected PostgreSQL from DATABASE_URL');
+        dbType = 'postgres';
+      } else if (databaseUrl.startsWith('mysql://')) {
+        console.log('🔄 DatabaseManager - Auto-detected MySQL from DATABASE_URL');
+        dbType = 'mysql';
+      }
+    }
 
     switch (dbType) {
       case 'mysql':
@@ -102,14 +114,26 @@ class DatabaseManager {
   }
 
   private async connectPostgreSQL(): Promise<DatabaseConnection> {
-    const pool = new PgPool({
-      host: config.database.postgres.host,
-      port: config.database.postgres.port,
-      user: config.database.postgres.user,
-      password: config.database.postgres.password,
-      database: config.database.postgres.database,
-      max: 10
-    });
+    const databaseUrl = process.env.DATABASE_URL;
+    
+    const poolConfig = databaseUrl 
+      ? { connectionString: databaseUrl, max: 10, ssl: process.env.NODE_ENV === 'production' ? { rejectUnauthorized: false } : false }
+      : {
+          host: config.database.postgres.host,
+          port: config.database.postgres.port,
+          user: config.database.postgres.user,
+          password: config.database.postgres.password,
+          database: config.database.postgres.database,
+          max: 10
+        };
+
+    const pool = new PgPool(poolConfig);
+
+    console.log(
+      databaseUrl
+        ? '🗄️ PostgreSQL using DATABASE_URL (production mode)'
+        : '🗄️ PostgreSQL using POSTGRES_* config (local mode)'
+    );
 
     // Test connection
     await pool.query('SELECT NOW()');
