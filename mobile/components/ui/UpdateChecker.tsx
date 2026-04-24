@@ -65,16 +65,25 @@ export function UpdateChecker() {
   const [progress, setProgress] = useState(0);          // 0–100
   const [errorMsg, setErrorMsg] = useState('');
   const [manifest, setManifest] = useState<AppVersionManifest | null>(null);
+  const [showCheckingUI, setShowCheckingUI] = useState(false);
   const downloadRef = useRef<ReturnType<typeof FileSystem.createDownloadResumable> | null>(null);
 
   useEffect(() => {
-    // En mode dev, expo-updates est désactivé → on skip tout
+    // Afficher le statut "Vérification" seulement si ça prend plus de 500ms
+    const timer = setTimeout(() => {
+      if (state === 'checking') setShowCheckingUI(true);
+    }, 500);
+
+    // En mode dev, on skip tout (sauf si Updates.isEnabled est forcé)
     if (__DEV__ || !Updates.isEnabled) {
       setState('idle');
+      clearTimeout(timer);
       return;
     }
 
-    void checkForUpdates();
+    void checkForUpdates().finally(() => {
+      clearTimeout(timer);
+    });
   }, []);
 
   // ── Orchestration principale ─────────────────────────────────────────────
@@ -189,7 +198,21 @@ export function UpdateChecker() {
 
   // ── Rendu ────────────────────────────────────────────────────────────────
 
-  if (state === 'checking' || state === 'idle') return null;
+  if (state === 'idle') return null;
+  
+  if (state === 'checking') {
+    if (!showCheckingUI) return null;
+    return (
+      <View style={styles.overlay}>
+        <View style={styles.card}>
+          <ActivityIndicator color="#16a34a" size="large" />
+          <Text style={[styles.title, { marginTop: 20 }]}>
+            Vérification des mises à jour...
+          </Text>
+        </View>
+      </View>
+    );
+  }
 
   const isNative = kind === 'native';
   const isDownloading = state === 'downloading';

@@ -66,7 +66,6 @@ function AppContent() {
         </Stack>
         <StatusBar style={colorScheme === 'dark' ? 'light' : 'dark'} />
         <ToastContainer />
-        <UpdateChecker />
         {isReady && isLocked && <BiometricLockScreen onUnlock={unlock} />}
       </View>
     </ThemeProvider>
@@ -93,6 +92,7 @@ export default function RootLayout() {
 
   return (
     <MobileI18nProvider>
+      <UpdateChecker />
       <MobileAuthProvider>
         <AppContent />
       </MobileAuthProvider>
