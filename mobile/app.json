@@ -43,7 +43,6 @@
         "android.permission.REQUEST_INSTALL_PACKAGES",
         "android.permission.INTERNET"
       ],
-      "usesCleartextTraffic": true,
       "package": "com.xybronix.FreeBike",
       "versionCode": 1
     },
@@ -61,7 +60,8 @@
             "enableShrinkResourcesInReleaseBuilds": true,
             "extraProguardRules": "-keep class com.facebook.hermes.unicode.** { *; }",
             "buildType": "apk",
-            "enableMinifyInReleaseBuilds": true
+            "enableMinifyInReleaseBuilds": true,
+            "usesCleartextTraffic": true
           }
         }
       ],
