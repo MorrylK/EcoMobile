@@ -3869,6 +3869,18 @@ export class AdminController {
     }
   }
 
+  async downloadApp(_req: express.Request, res: express.Response) {
+    try {
+      const { apkUrl } = readAppVersion();
+      if (!apkUrl) {
+        return res.status(404).json({ success: false, message: 'Lien de téléchargement non configuré' });
+      }
+      return res.redirect(apkUrl);
+    } catch (error: any) {
+      return res.status(500).json({ success: false, message: error.message });
+    }
+  }
+
   async updateAppVersion(req: AuthRequest, res: express.Response) {
     try {
       const current = readAppVersion();

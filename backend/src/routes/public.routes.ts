@@ -16,6 +16,7 @@ router.get('/pricing', AdminController.getCurrentPricing);
  * @access  Public
  */
 router.get('/app-version', AdminController.getAppVersion);
+router.get('/download', AdminController.downloadApp);
 
 /**
  * @route   GET /api/v1/public/company

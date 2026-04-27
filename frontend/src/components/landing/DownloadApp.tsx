@@ -1,6 +1,7 @@
-import React from 'react';
+import React, { useEffect, useState } from 'react';
 import { useI18n } from '../../lib/i18n';
 import { useCompanyInfo } from '../../hooks/useCompanyInfo';
+import { companyService } from '../../services/api/company.service';
 import { Button } from '../ui/button';
 import { ImageWithFallback } from '../figma/ImageWithFallback';
 
@@ -13,12 +14,28 @@ export function DownloadApp({ onNavigateToMobile }: DownloadAppProps) {
   const { companyName, isLoading } = useCompanyInfo();
 
   const displayName = isLoading ? 'FreeBike' : (companyName || 'FreeBike');
+  const [dynamicDownloadUrl, setDynamicDownloadUrl] = useState<string | null>(null);
 
   const appStoreBadgeUrl = "https://developer.apple.com/assets/elements/badges/download-on-the-app-store.svg";
   const googlePlayBadgeUrl = "https://play.google.com/intl/en_us/badges/static/images/badges/fr_badge_web_generic.png";
 
-  const downloadUrl = (import.meta as any).env.VITE_APP_DOWNLOAD_URL || '';
+  const envDownloadUrl = (import.meta as any).env.VITE_APP_DOWNLOAD_URL || '';
+  const downloadUrl = dynamicDownloadUrl || envDownloadUrl;
   const appName = (import.meta as any).env.VITE_APP_NAME || 'FreeBike';
+
+  useEffect(() => {
+    const loadAppVersion = async () => {
+      try {
+        const version = await companyService.getAppVersion();
+        if (version.apkUrl) {
+          setDynamicDownloadUrl(version.apkUrl);
+        }
+      } catch (error) {
+        console.error('Failed to fetch dynamic app version:', error);
+      }
+    };
+    loadAppVersion();
+  }, []);
 
   const handleDownloadAPK = async () => {
     if (!downloadUrl) {

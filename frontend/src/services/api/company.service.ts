@@ -1,5 +1,6 @@
 import { apiClient } from './client';
 import { BikePosition } from './bike.service';
+import { AppVersionManifest } from './admin.service';
 
 export interface CompanySettings {
   companyName: string;
@@ -326,6 +327,16 @@ export class CompanyService {
     if (!response.success) {
       throw new Error(response.error || 'Erreur lors de la suppression de l\'override');
     }
+  }
+
+  async getAppVersion(): Promise<AppVersionManifest> {
+    const response = await apiClient.get<AppVersionManifest>('/public/app-version');
+    
+    if (!response.success || !response.data) {
+      throw new Error(response.error || 'Erreur lors de la récupération de la version applicative');
+    }
+
+    return response.data;
   }
 }
 
