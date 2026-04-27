@@ -312,7 +312,8 @@ export const requirePermission = (resource: string, action: string) => {
     }
 
     const requiredPermission = `${resource}:${action}`;
-    const hasPermission = req.user.permissions?.includes(requiredPermission) || 
+    const hasPermission = req.user.role === 'SUPER_ADMIN' ||
+                         req.user.permissions?.includes(requiredPermission) || 
                          req.user.permissions?.includes(`${resource}:manage`) ||
                          req.user.permissions?.includes('admin:manage');
 

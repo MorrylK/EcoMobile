@@ -38,8 +38,18 @@ export class AdminController {
    * OPTIMISATION: Endpoint groupé pour récupérer toutes les données du dashboard en une seule requête
    * Inclut les stats, les courses récentes, les incidents et les positions GPS
    */
+  // Cache pour le dashboard (60 secondes)
+  private static dashboardCache: { data: any; timestamp: number } | null = null;
+  private static CACHE_TTL = 60 * 1000; // 1 minute
+
   async getDashboardComplete(req: AuthRequest, res: express.Response) {
     try {
+      // Vérifier le cache
+      const currentTime = Date.now();
+      if (AdminController.dashboardCache && (currentTime - AdminController.dashboardCache.timestamp) < AdminController.CACHE_TTL) {
+        return res.json(AdminController.dashboardCache.data);
+      }
+
       const [
         dashboardStats,
         recentTrips,
@@ -162,7 +172,7 @@ export class AdminController {
         ).length
       };
 
-      await logActivity(
+      logActivity(
         req.user!.id,
         'VIEW',
         'DASHBOARD',
@@ -170,9 +180,9 @@ export class AdminController {
         'Viewed complete dashboard',
         { totalUsers, totalBikes, totalRides },
         req
-      );
+      ).catch(err => console.error('Dashboard log error:', err));
 
-      res.json({
+      const responseData = {
         success: true,
         message: t('admin.dashboard_retrieved', req.language || 'fr'),
         data: {
@@ -194,9 +204,17 @@ export class AdminController {
             isOnline: bike.lastSeenAt && new Date(bike.lastSeenAt) > fiveMinutesAgo
           }))
         }
-      });
+      };
+
+      // Mettre à jour le cache
+      AdminController.dashboardCache = {
+        data: responseData,
+        timestamp: Date.now()
+      };
+
+      return res.json(responseData);
     } catch (error: any) {
-      res.status(500).json({
+      return res.status(500).json({
         success: false,
         message: error.message
       });
@@ -271,7 +289,7 @@ export class AdminController {
         req
       );
 
-      res.json({
+      return res.json({
         success: true,
         message: t('admin.stats_retrieved', req.language),
         data: {
@@ -297,7 +315,7 @@ export class AdminController {
         }
       });
     } catch (error: any) {
-      res.status(500).json({
+      return res.status(500).json({
         success: false,
         message: error.message
       });
@@ -335,12 +353,12 @@ export class AdminController {
         req
       );
 
-      res.json({
+      return res.json({
         success: true,
         data: settingsMap
       });
     } catch (error: any) {
-      res.status(500).json({
+      return res.status(500).json({
         success: false,
         message: error.message
       });
@@ -390,12 +408,12 @@ export class AdminController {
         req
       );
 
-      res.json({
+      return res.json({
         success: true,
         message: t('admin.settings_updated', req.language)
       });
     } catch (error: any) {
-      res.status(500).json({
+      return res.status(500).json({
         success: false,
         message: error.message
       });
@@ -481,12 +499,12 @@ export class AdminController {
         }) as any;
       }
 
-      res.json({
+      return res.json({
         success: true,
         data: pricing
       });
     } catch (error: any) {
-      res.status(500).json({
+      return res.status(500).json({
         success: false,
         message: error.message
       });
@@ -662,13 +680,13 @@ export class AdminController {
         req
       );
 
-      res.json({
+      return res.json({
         success: true,
         message: t('admin.pricing_updated', req.language),
         data: updatedPricing
       });
     } catch (error: any) {
-      res.status(500).json({
+      return res.status(500).json({
         success: false,
         message: error.message
       });
@@ -892,12 +910,12 @@ export class AdminController {
         req
       );
 
-      res.json({
+      return res.json({
         success: true,
         data: promotions
       });
     } catch (error: any) {
-      res.status(500).json({
+      return res.status(500).json({
         success: false,
         message: error.message
       });
@@ -1812,7 +1830,7 @@ export class AdminController {
         req
       );
 
-      res.json({
+      return res.json({
         success: true,
         data: {
           todayRevenue,
@@ -1827,7 +1845,7 @@ export class AdminController {
         }
       });
     } catch (error: any) {
-      res.status(500).json({
+      return res.status(500).json({
         success: false,
         message: error.message
       });
@@ -1938,7 +1956,7 @@ export class AdminController {
         req
       );
 
-      res.json({
+      return res.json({
         success: true,
         data: {
           shortTerm: shortTermData,
@@ -1947,7 +1965,7 @@ export class AdminController {
         }
       });
     } catch (error: any) {
-      res.status(500).json({
+      return res.status(500).json({
         success: false,
         message: error.message
       });
@@ -2013,7 +2031,7 @@ export class AdminController {
         req
       );
 
-      res.json({
+      return res.json({
         success: true,
         data: {
           topUps: { total: topUps._sum.amount || 0, count: topUps._count },
@@ -2024,7 +2042,7 @@ export class AdminController {
         }
       });
     } catch (error: any) {
-      res.status(500).json({
+      return res.status(500).json({
         success: false,
         message: error.message
       });
@@ -2100,9 +2118,9 @@ export class AdminController {
         
         res.setHeader('Content-Type', 'text/csv');
         res.setHeader('Content-Disposition', `attachment; filename=export_financier_${startDate}_${endDate}.csv`);
-        res.send(csv);
+        return res.send(csv);
       } else {
-        res.json({ 
+        return res.json({ 
           success: true, 
           data: { 
             rides: rides.map(ride => ({
@@ -2123,7 +2141,7 @@ export class AdminController {
         });
       }
     } catch (error: any) {
-      res.status(500).json({
+      return res.status(500).json({
         success: false,
         message: error.message
       });
@@ -2203,7 +2221,7 @@ export class AdminController {
         req
       );
 
-      res.json({
+      return res.json({
         success: true,
         data: {
           incidents,
@@ -2216,7 +2234,7 @@ export class AdminController {
         }
       });
     } catch (error: any) {
-      res.status(500).json({
+      return res.status(500).json({
         success: false,
         message: error.message
       });
@@ -2346,13 +2364,13 @@ export class AdminController {
         req
       );
 
-      res.json({
+      return res.json({
         success: true,
         message: 'Incident updated',
         data: incident
       });
     } catch (error: any) {
-      res.status(500).json({
+      return res.status(500).json({
         success: false,
         message: error.message
       });
@@ -2377,12 +2395,12 @@ export class AdminController {
         take: 50
       });
 
-      res.json({
+      return res.json({
         success: true,
         data: reviews
       });
     } catch (error: any) {
-      res.status(500).json({
+      return res.status(500).json({
         success: false,
         message: error.message
       });
@@ -2535,7 +2553,7 @@ export class AdminController {
         req
       );
 
-      res.json({
+      return res.json({
         success: true,
         data: {
           reviews,
@@ -2548,7 +2566,7 @@ export class AdminController {
         }
       });
     } catch (error: any) {
-      res.status(500).json({
+      return res.status(500).json({
         success: false,
         message: error.message
       });
@@ -2966,7 +2984,7 @@ export class AdminController {
         prisma.activityLog.count({ where })
       ]);
 
-      res.json({
+      return res.json({
         success: true,
         data: {
           logs,
@@ -2979,7 +2997,7 @@ export class AdminController {
         }
       });
     } catch (error: any) {
-      res.status(500).json({
+      return res.status(500).json({
         success: false,
         message: error.message
       });
@@ -3034,12 +3052,12 @@ export class AdminController {
         req
       );
 
-      res.json({
+      return res.json({
         success: true,
         data: transformedRoles
       });
     } catch (error: any) {
-      res.status(500).json({
+      return res.status(500).json({
         success: false,
         message: error.message
       });
@@ -3583,12 +3601,12 @@ export class AdminController {
         req
       );
 
-      res.json({
+      return res.json({
         success: true,
         data: permissions
       });
     } catch (error: any) {
-      res.status(500).json({
+      return res.status(500).json({
         success: false,
         message: error.message
       });

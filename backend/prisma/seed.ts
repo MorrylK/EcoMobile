@@ -61,6 +61,8 @@ async function main() {
     // ===== ADMIN GLOBAL =====
     { name: 'admin:manage', description: 'Accès administrateur complet', resource: 'admin', action: 'manage' },
     { name: 'admin:read', description: 'Voir le tableau de bord admin', resource: 'admin', action: 'read' },
+    { name: 'admin:download', description: 'Autoriser le téléchargement de l\'APK', resource: 'admin', action: 'download' },
+    { name: 'app_version:manage', description: 'Gérer la version de l\'application et l\'APK', resource: 'app_version', action: 'manage' },
 
     // ===== DASHBOARD =====
     { name: 'dashboard:read', description: 'Voir le tableau de bord', resource: 'dashboard', action: 'read' },
@@ -252,7 +254,7 @@ async function main() {
   // Assigner des permissions spécifiques à l'ADMIN
   const adminPermissions = [
     // Dashboard
-    'admin:read', 'dashboard:read', 'dashboard:export',
+    'admin:read', 'admin:download', 'app_version:manage', 'dashboard:read', 'dashboard:export',
     // Utilisateurs
     'users:create', 'users:read', 'users:update', 'users:export', 'users:ban', 'users:verify',
     'users:reset_password', 'users:manage_deposit', 'users:manage_wallet',
