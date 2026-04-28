@@ -4,3 +4,8 @@ node_modules/
 dist/
 build/
 .cache/
+.vercel
+.env*.local
+.env
+.env.production
+.env.development
