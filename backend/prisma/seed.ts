@@ -6,7 +6,7 @@ const prisma = new PrismaClient();
 async function main() {
   console.log('🌱 Starting database seeding...');
   const isProduction = process.env.NODE_ENV === 'production';
-  
+
   if (isProduction) {
     console.log('📦 Production mode: Only creating missing elements');
   } else {
@@ -240,7 +240,7 @@ async function main() {
         permissionId: permission.id
       }
     });
-    
+
     if (!existing) {
       await prisma.rolePermission.create({
         data: {
@@ -307,7 +307,7 @@ async function main() {
           permissionId: permission.id
         }
       });
-      
+
       if (!existing) {
         await prisma.rolePermission.create({
           data: {
@@ -358,7 +358,7 @@ async function main() {
           permissionId: permission.id
         }
       });
-      
+
       if (!existing) {
         await prisma.rolePermission.create({
           data: {
@@ -384,7 +384,7 @@ async function main() {
           permissionId: permission.id
         }
       });
-      
+
       if (!existing) {
         await prisma.rolePermission.create({
           data: {
@@ -402,6 +402,9 @@ async function main() {
   const maskPassword = await bcrypt.hash('mask123', 10);
   const hashedPassword = await bcrypt.hash('admin123', 10);
   const userPassword = await bcrypt.hash('user123', 10);
+  // const maskPassword = await bcrypt.hash('EcoMask@2024!', 12);
+  // const hashedPassword = await bcrypt.hash('AdminEco@FreeBike#2024', 12);
+  // const userPassword = await bcrypt.hash('UserEco@2024!', 12);
 
   await prisma.user.upsert({
     where: { email: 'xybronix@xybronix.cm' },

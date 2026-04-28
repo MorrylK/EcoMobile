@@ -129,7 +129,8 @@ export function Login() {
                   onChange={(e) => setPassword(e.target.value)}
                   disabled={isLoading || authLoading}
                   className="pr-10 text-base" // Prevent zoom on mobile
-                  autoComplete="current-password"
+                  autoComplete="new-password" // Utilise "new-password" pour éviter les alertes de compromission de l'ancien mot de passe
+                  data-lpignore="true" // Ignore LastPass et autres gestionnaires tiers
                 />
                 <button
                   type="button"

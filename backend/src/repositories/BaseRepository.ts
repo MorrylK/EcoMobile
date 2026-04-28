@@ -151,7 +151,7 @@ export abstract class BaseRepository<T> {
 
   async findById(id: string): Promise<T | null> {
     const quotedTableName = this.quoteIdentifier(this.tableName);
-    const sql = `SELECT * FROM ${quotedTableName} WHERE id = ${this.getPlaceholder(1)}`;
+    const sql = `SELECT * FROM ${quotedTableName} WHERE ${this.quoteIdentifier('id')} = ${this.getPlaceholder(1)}`;
     const rows = await this.executeQuery(sql, [id]);
     return rows.length > 0 ? (rows[0] as T) : null;
   }
@@ -211,7 +211,7 @@ export abstract class BaseRepository<T> {
     
     const setClause = columns.map((col, i) => `${this.quoteIdentifier(col)} = ${this.getPlaceholder(i + 1)}`).join(', ');
     const quotedTableName = this.quoteIdentifier(this.tableName);
-    const sql = `UPDATE ${quotedTableName} SET ${setClause} WHERE id = ${this.getPlaceholder(columns.length + 1)}`;
+    const sql = `UPDATE ${quotedTableName} SET ${setClause} WHERE ${this.quoteIdentifier('id')} = ${this.getPlaceholder(columns.length + 1)}`;
     
     await this.executeNonQuery(sql, [...values, id]);
     return this.findById(id);
@@ -219,7 +219,7 @@ export abstract class BaseRepository<T> {
 
   async delete(id: string): Promise<boolean> {
     const quotedTableName = this.quoteIdentifier(this.tableName);
-    const sql = `DELETE FROM ${quotedTableName} WHERE id = ${this.getPlaceholder(1)}`;
+    const sql = `DELETE FROM ${quotedTableName} WHERE ${this.quoteIdentifier('id')} = ${this.getPlaceholder(1)}`;
     const result = await this.executeNonQuery(sql, [id]);
     return result.changes > 0 || result.affectedRows > 0;
   }

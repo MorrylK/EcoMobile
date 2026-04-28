@@ -50,7 +50,7 @@ export class SessionRepository extends BaseRepository<Session> {
 
   async deactivateSession(sessionId: string): Promise<void> {
     const quotedTableName = this.quoteIdentifier(this.tableName);
-    const sql = `UPDATE ${quotedTableName} SET ${this.quoteIdentifier('isActive')} = ${this.getPlaceholder(1)}, ${this.quoteIdentifier('updatedAt')} = ${this.getPlaceholder(2)} WHERE id = ${this.getPlaceholder(3)}`;
+    const sql = `UPDATE ${quotedTableName} SET ${this.quoteIdentifier('isActive')} = ${this.getPlaceholder(1)}, ${this.quoteIdentifier('updatedAt')} = ${this.getPlaceholder(2)} WHERE ${this.quoteIdentifier('id')} = ${this.getPlaceholder(3)}`;
     await this.executeNonQuery(sql, [false, new Date(), sessionId]);
   }
 
@@ -60,7 +60,7 @@ export class SessionRepository extends BaseRepository<Session> {
     const values = [false, new Date(), userId];
 
     if (excludeSessionId) {
-      sql += ` AND id != ${this.getPlaceholder(4)}`;
+      sql += ` AND ${this.quoteIdentifier('id')} != ${this.getPlaceholder(4)}`;
       values.push(excludeSessionId);
     }
 
@@ -75,7 +75,7 @@ export class SessionRepository extends BaseRepository<Session> {
 
   async updateLastActivity(sessionId: string): Promise<void> {
     const quotedTableName = this.quoteIdentifier(this.tableName);
-    const sql = `UPDATE ${quotedTableName} SET ${this.quoteIdentifier('updatedAt')} = ${this.getPlaceholder(1)} WHERE id = ${this.getPlaceholder(2)}`;
+    const sql = `UPDATE ${quotedTableName} SET ${this.quoteIdentifier('updatedAt')} = ${this.getPlaceholder(1)} WHERE ${this.quoteIdentifier('id')} = ${this.getPlaceholder(2)}`;
     await this.executeNonQuery(sql, [new Date(), sessionId]);
   }
 

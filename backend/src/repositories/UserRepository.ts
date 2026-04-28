@@ -16,7 +16,7 @@ export class UserRepository extends BaseRepository<User> {
 
   async updatePassword(userId: string, hashedPassword: string): Promise<void> {
     const quotedTableName = this.quoteIdentifier(this.tableName);
-    const sql = `UPDATE ${quotedTableName} SET ${this.quoteIdentifier('password')} = ${this.getPlaceholder(1)}, ${this.quoteIdentifier('updatedAt')} = ${this.getPlaceholder(2)} WHERE id = ${this.getPlaceholder(3)}`;
+    const sql = `UPDATE ${quotedTableName} SET ${this.quoteIdentifier('password')} = ${this.getPlaceholder(1)}, ${this.quoteIdentifier('updatedAt')} = ${this.getPlaceholder(2)} WHERE ${this.quoteIdentifier('id')} = ${this.getPlaceholder(3)}`;
     await this.executeNonQuery(sql, [hashedPassword, new Date(), userId]);
   }
 
@@ -87,11 +87,11 @@ export class UserRepository extends BaseRepository<User> {
 
     // Utiliser UPDATE séparé de SELECT pour MySQL
     const quotedTableName = this.quoteIdentifier(this.tableName);
-    const updateSql = `UPDATE ${quotedTableName} SET ${updateFields.join(', ')} WHERE id = ${this.getPlaceholder(paramIndex)}`;
+    const updateSql = `UPDATE ${quotedTableName} SET ${updateFields.join(', ')} WHERE ${this.quoteIdentifier('id')} = ${this.getPlaceholder(paramIndex)}`;
     await this.executeNonQuery(updateSql, values);
 
     // Récupérer les données mises à jour
-    const selectSql = `SELECT * FROM ${quotedTableName} WHERE id = ${this.getPlaceholder(1)}`;
+    const selectSql = `SELECT * FROM ${quotedTableName} WHERE ${this.quoteIdentifier('id')} = ${this.getPlaceholder(1)}`;
     const result = await this.executeQuery(selectSql, [userId]);
     
     if (!result || result.length === 0) {
@@ -103,19 +103,19 @@ export class UserRepository extends BaseRepository<User> {
 
   async verifyEmail(userId: string): Promise<void> {
     const quotedTableName = this.quoteIdentifier(this.tableName);
-    const sql = `UPDATE ${quotedTableName} SET ${this.quoteIdentifier('emailVerified')} = ${this.getPlaceholder(1)}, ${this.quoteIdentifier('emailVerificationToken')} = NULL, ${this.quoteIdentifier('emailVerificationExpires')} = NULL, ${this.quoteIdentifier('updatedAt')} = ${this.getPlaceholder(2)} WHERE id = ${this.getPlaceholder(3)}`;
+    const sql = `UPDATE ${quotedTableName} SET ${this.quoteIdentifier('emailVerified')} = ${this.getPlaceholder(1)}, ${this.quoteIdentifier('emailVerificationToken')} = NULL, ${this.quoteIdentifier('emailVerificationExpires')} = NULL, ${this.quoteIdentifier('updatedAt')} = ${this.getPlaceholder(2)} WHERE ${this.quoteIdentifier('id')} = ${this.getPlaceholder(3)}`;
     await this.executeNonQuery(sql, [true, new Date(), userId]);
   }
 
   async updateEmailVerificationToken(userId: string, token: string, expiresAt: Date): Promise<void> {
     const quotedTableName = this.quoteIdentifier(this.tableName);
-    const sql = `UPDATE ${quotedTableName} SET ${this.quoteIdentifier('emailVerificationToken')} = ${this.getPlaceholder(1)}, ${this.quoteIdentifier('emailVerificationExpires')} = ${this.getPlaceholder(2)}, ${this.quoteIdentifier('updatedAt')} = ${this.getPlaceholder(3)} WHERE id = ${this.getPlaceholder(4)}`;
+    const sql = `UPDATE ${quotedTableName} SET ${this.quoteIdentifier('emailVerificationToken')} = ${this.getPlaceholder(1)}, ${this.quoteIdentifier('emailVerificationExpires')} = ${this.getPlaceholder(2)}, ${this.quoteIdentifier('updatedAt')} = ${this.getPlaceholder(3)} WHERE ${this.quoteIdentifier('id')} = ${this.getPlaceholder(4)}`;
     await this.executeNonQuery(sql, [token, expiresAt, new Date(), userId]);
   }
 
   async updateStatus(userId: string, status: 'pending' | 'pending_verification' | 'active' | 'inactive' | 'suspended' | 'banned'): Promise<void> {
     const quotedTableName = this.quoteIdentifier(this.tableName);
-    const sql = `UPDATE ${quotedTableName} SET ${this.quoteIdentifier('status')} = ${this.getPlaceholder(1)}, ${this.quoteIdentifier('updatedAt')} = ${this.getPlaceholder(2)} WHERE id = ${this.getPlaceholder(3)}`;
+    const sql = `UPDATE ${quotedTableName} SET ${this.quoteIdentifier('status')} = ${this.getPlaceholder(1)}, ${this.quoteIdentifier('updatedAt')} = ${this.getPlaceholder(2)} WHERE ${this.quoteIdentifier('id')} = ${this.getPlaceholder(3)}`;
     await this.executeNonQuery(sql, [status, new Date(), userId]);
   }
 }
